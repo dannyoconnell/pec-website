@@ -36,12 +36,22 @@ export default async (req, context) => {
             // Actually, simplest migration: The user edits schedule by "Saving Schedule" which dumps the whole week.
             // But 'save-match' usually implies saving ONE match result.
 
+            // Ensure scores are integers (handle 'BYE' string or '-' inputs)
+            const resolveScore = (val) => {
+                if (val === '-' || val === '' || val === undefined || val === null) return 0;
+                const parsed = parseInt(val);
+                return isNaN(parsed) ? 0 : parsed;
+            };
+
+            const scoreA = resolveScore(m.scoreA);
+            const scoreB = resolveScore(m.scoreB);
+
             if (m.id) {
                 // Update specific match (Score reporting)
                 await sql`
                     UPDATE matches 
-                    SET score_a = ${m.scoreA}, 
-                        score_b = ${m.scoreB}, 
+                    SET score_a = ${scoreA}, 
+                        score_b = ${scoreB}, 
                         status = ${m.status}, 
                         report_data = ${m.reportData}
                     WHERE id = ${m.id}
@@ -54,13 +64,13 @@ export default async (req, context) => {
                 if (existing.length > 0) {
                     await sql`
                         UPDATE matches 
-                        SET date = ${m.date}, time = ${m.time}, score_a = ${m.scoreA}, score_b = ${m.scoreB}, status = ${m.status}
+                        SET date = ${m.date}, time = ${m.time}, score_a = ${scoreA}, score_b = ${scoreB}, status = ${m.status}
                         WHERE id = ${existing[0].id}
                      `;
                 } else {
                     await sql`
                         INSERT INTO matches (week, game, team_a, team_b, score_a, score_b, status, date, time, report_data)
-                        VALUES (${m.week}, ${m.game}, ${m.teamA}, ${m.teamB}, ${m.scoreA || 0}, ${m.scoreB || 0}, ${m.status || 'SCHEDULED'}, ${m.date}, ${m.time}, ${m.reportData || null})
+                        VALUES (${m.week}, ${m.game}, ${m.teamA}, ${m.teamB}, ${scoreA}, ${scoreB}, ${m.status || 'SCHEDULED'}, ${m.date}, ${m.time}, ${m.reportData || null})
                      `;
                 }
             }
