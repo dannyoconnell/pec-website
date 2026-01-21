@@ -1,7 +1,7 @@
 import { neon } from '@netlify/neon';
 
 export default async (req, context) => {
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.DATABASE_URL.trim());
     const url = new URL(req.url);
     const teamParam = url.searchParams.get('team');
 

@@ -5,7 +5,7 @@ export default async (req, context) => {
         return new Response("Method Not Allowed", { status: 405 });
     }
 
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.DATABASE_URL.trim());
 
     try {
         const data = await req.json(); // Expects array or single object
