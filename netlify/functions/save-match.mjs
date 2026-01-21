@@ -5,7 +5,16 @@ export default async (req, context) => {
         return new Response("Method Not Allowed", { status: 405 });
     }
 
-    const sql = neon(process.env.DATABASE_URL.trim());
+    // Aggressive cleanup: remove quotes, whitespace, and unsupported params
+    let connString = process.env.DATABASE_URL || "";
+    connString = connString.replace(/['"]/g, "").trim();
+    connString = connString.replace(/(&|\?)channel_binding=require/, "");
+    // Ensure sslmode is present if needed, though usually default
+    if (!connString.includes("sslmode=")) {
+        connString += (connString.includes("?") ? "&" : "?") + "sslmode=require";
+    }
+
+    const sql = neon(connString);
 
     try {
         const data = await req.json(); // Expects array or single object

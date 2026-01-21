@@ -5,7 +5,15 @@ export default async (req, context) => {
         return new Response("Method Not Allowed", { status: 405 });
     }
 
-    const sql = neon(process.env.DATABASE_URL.trim());
+    // Aggressive cleanup
+    let connString = process.env.DATABASE_URL || "";
+    connString = connString.replace(/['"]/g, "").trim();
+    connString = connString.replace(/(&|\?)channel_binding=require/, "");
+    if (!connString.includes("sslmode=")) {
+        connString += (connString.includes("?") ? "&" : "?") + "sslmode=require";
+    }
+
+    const sql = neon(connString);
 
     try {
         const { team, players } = await req.json();

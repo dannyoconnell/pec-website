@@ -1,7 +1,15 @@
 import { neon } from '@netlify/neon';
 
 export default async (req, context) => {
-    const sql = neon(process.env.DATABASE_URL.trim());
+    // Aggressive cleanup
+    let connString = process.env.DATABASE_URL || "";
+    connString = connString.replace(/['"]/g, "").trim();
+    connString = connString.replace(/(&|\?)channel_binding=require/, "");
+    if (!connString.includes("sslmode=")) {
+        connString += (connString.includes("?") ? "&" : "?") + "sslmode=require";
+    }
+
+    const sql = neon(connString);
     const url = new URL(req.url);
     const weekParam = url.searchParams.get('week');
 
