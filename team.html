@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Details | PEC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;700&family=Teko:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Main Navigation -->
+    <header class="main-header">
+        <div class="container header-inner">
+            <a href="index.html" class="logo">PEC<span class="logo-accent">.</span></a>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="schedule.html">Schedule</a></li>
+                    <li><a href="standings.html">Standings</a></li>
+                    <li><a href="teams.html" class="active">Teams</a></li>
+                    <li><a href="watch.html">Watch</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <button class="btn btn-outline" style="margin-right:0.5rem">Log In</button>
+                <a href="admin.html" class="btn btn-primary" style="text-decoration:none;">Admin</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="team-header-container">
+            <section class="team-hero">
+                <div class="container team-hero-inner">
+                    <div class="team-hero-logo" id="team-hero-logo">?</div>
+                    <div class="team-hero-info">
+                        <h1 id="team-hero-name">Team Name</h1>
+                        <p class="team-hero-desc">Member of the Power Esports Conference since 2024.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="team-subnav-section">
+                <div class="container team-subnav-inner">
+                    <div class="team-filter-group">
+                        <select id="team-game-filter">
+                            <option value="all">All Games</option>
+                            <option value="Rocket League">Rocket League</option>
+                            <option value="Overwatch 2">Overwatch 2</option>
+                            <option value="Smash Bros">Smash Bros</option>
+                            <option value="Valorant">Valorant</option>
+                        </select>
+                    </div>
+                    <nav class="team-tabs">
+                        <button class="team-tab active" data-tab="schedule">Schedule</button>
+                        <button class="team-tab" data-tab="roster">Roster</button>
+                        <button class="team-tab" data-tab="stats">Stats</button>
+                    </nav>
+                </div>
+            </section>
+        </div>
+
+        <section class="container" style="padding: 2rem 1rem;">
+            <!-- Overview/Schedule View -->
+            <div id="view-overview" class="team-view active">
+                <div class="section-header">
+                    <h2>Upcoming Matches</h2>
+                </div>
+                <div class="schedule-grid" id="team-schedule-grid">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+            <!-- Roster View -->
+            <div id="view-roster" class="team-view" style="display:none;">
+                <div class="section-header">
+                    <h2>Active Roster</h2>
+                </div>
+                <div class="roster-grid" id="team-roster-grid">
+                    <!-- Injected Via JS -->
+                </div>
+            </div>
+
+            <!-- Stats View -->
+            <div id="view-stats" class="team-view" style="display:none;">
+                <div class="section-header">
+                    <h2>Season Statistics</h2>
+                </div>
+                <div class="stats-container" id="team-stats-view-content">
+                    <!-- Injected Via JS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container footer-inner">
+            <div class="footer-brand">
+                <h2>PEC</h2>
+                <p>&copy; 2026 Power Esports Conference</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Terms</a>
+                <a href="#">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js?v=4"></script>
+</body>
+
+</html>

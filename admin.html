@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | PEC</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;700&family=Teko:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .admin-login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .admin-dashboard {
+            display: none;
+            padding-top: 2rem;
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+        }
+
+        .admin-sidebar {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 8px;
+            height: fit-content;
+        }
+
+        .admin-nav-item {
+            display: block;
+            padding: 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-bottom: 1px solid #334155;
+            cursor: pointer;
+        }
+
+        .admin-nav-item.active {
+            color: white;
+            border-left: 3px solid var(--accent-red);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .admin-content h2 {
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--accent-red);
+            padding-bottom: 0.5rem;
+        }
+
+        .editor-card {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #334155;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.5rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            border-radius: 4px;
+        }
+
+        .status-LIVE {
+            color: var(--accent-red);
+            font-weight: bold;
+        }
+
+        .status-FINAL {
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="login-overlay" class="admin-login-overlay">
+        <div style="text-align:center;">
+            <h1>PEC ADMIN</h1>
+            <input type="password" id="admin-pass" placeholder="Enter Password" class="form-control"
+                style="margin: 1rem 0; width: 250px; text-align:center;">
+            <br>
+            <button class="btn btn-primary" onclick="checkLogin()">Access Dashboard</button>
+        </div>
+    </div>
+
+    <div class="admin-dashboard container" id="dashboard">
+        <header style="display:flex; justify-content:space-between; margin-bottom:2rem;">
+            <h1>Admin Control Panel</h1>
+            <div>
+                <button class="btn btn-outline" onclick="window.location.href='index.html'">View Site</button>
+                <button class="btn btn-primary" onclick="resetAppData()">Reset Data</button>
+            </div>
+        </header>
+
+        <div class="admin-grid">
+            <aside class="admin-sidebar">
+                <div class="admin-nav-item active" onclick="switchTab('scores')">Live Ticker & Scores</div>
+                <div class="admin-nav-item" onclick="switchTab('schedule')">Schedule Editor</div>
+                <div class="admin-nav-item" onclick="switchTab('roster')">Roster Editor</div>
+                <div class="admin-nav-item" onclick="switchTab('reports')">Match Reports</div>
+            </aside>
+
+            <main class="admin-content">
+                <!-- Scores Editor -->
+                <div id="view-scores">
+                    <h2>Manage Ticker Scores</h2>
+                    <div id="scores-list"></div>
+                    <button class="btn btn-outline" onclick="addScoreRow()">+ Add New Score Match</button>
+                    <button class="btn btn-primary" style="margin-top:2rem;" onclick="saveScores()">Save
+                        Changes</button>
+                </div>
+
+                <!-- Schedule Editor -->
+                <div id="view-schedule" style="display:none;">
+                    <h2>Manage Schedule</h2>
+                    <p style="color:var(--text-muted);">Select a week to edit matches.</p>
+                    <select id="admin-week-select" class="form-control" style="max-width:200px; margin-bottom:1rem;"
+                        onchange="loadScheduleEditor()">
+                        <option value="1">Week 1</option>
+                        <option value="2">Week 2</option>
+                        <option value="3">Week 3</option>
+                        <option value="4">Week 4</option>
+                        <option value="5">Week 5</option>
+                        <option value="6">Week 6</option>
+                        <option value="7">Week 7</option>
+                        <option value="8">Week 8</option>
+                        <option value="9">Week 9</option>
+                    </select>
+                    <div id="schedule-editor-list"></div>
+                    <button class="btn btn-primary" style="margin-top:2rem;" onclick="saveSchedule()">Save
+                        Schedule</button>
+                </div>
+
+                <!-- Roster Editor -->
+                <div id="view-roster" style="display:none;">
+                    <h2>Manage Rosters</h2>
+                    <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                        <select id="admin-roster-team" class="form-control" style="max-width:200px;"
+                            onchange="loadRosterEditor()">
+                            <!-- Populated by JS -->
+                        </select>
+                        <select id="admin-roster-game-filter" class="form-control" style="max-width:200px;"
+                            onchange="renderRosterList()">
+                            <option value="all">All Games</option>
+                            <option value="Rocket League">Rocket League</option>
+                            <option value="Overwatch 2">Overwatch 2</option>
+                            <option value="Smash Bros">Smash Bros</option>
+                            <option value="Valorant">Valorant</option>
+                        </select>
+                    </div>
+                    <div id="roster-editor-list"></div>
+                    <button class="btn btn-outline" onclick="addPlayerRow()">+ Add Player</button>
+                    <button class="btn btn-primary" style="margin-top:2rem;" onclick="saveRoster()">Save Roster</button>
+                </div>
+
+                <!-- Match Reports -->
+                <div id="view-reports" style="display:none;">
+                    <h2>Match Results & Reports</h2>
+                    <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                        <select id="report-week-select" class="form-control" style="max-width:150px;"
+                            onchange="loadReports()">
+                            <option value="1">Week 1</option>
+                            <option value="2">Week 2</option>
+                            <option value="3">Week 3</option>
+                            <option value="4">Week 4</option>
+                            <option value="5">Week 5</option>
+                            <option value="6">Week 6</option>
+                            <option value="7">Week 7</option>
+                            <option value="8">Week 8</option>
+                            <option value="9">Week 9</option>
+                        </select>
+                        <select id="report-game-select" class="form-control" style="max-width:200px;"
+                            onchange="loadReports()">
+                            <option value="all">All Games</option>
+                            <option value="Rocket League">Rocket League</option>
+                            <option value="Overwatch 2">Overwatch 2</option>
+                            <option value="Smash Bros">Smash Bros</option>
+                            <option value="Valorant">Valorant</option>
+                        </select>
+                    </div>
+                    <div id="match-reports-list" style="display:flex; flex-direction:column; gap:1rem;"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="script.js?v=6"></script>
+    <script>
+        function checkLogin() {
+            const pass = document.getElementById('admin-pass').value;
+            if (pass === 'admin') {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                initAdmin();
+            } else {
+                alert('Invalid Password');
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.admin-content > div').forEach(d => d.style.display = 'none');
+            document.getElementById(`view-${tab}`).style.display = 'block';
+        }
+
+        // --- SCORES LOGIC ---
+        function initAdmin() {
+            renderScoresEditor();
+            loadScheduleEditor();
+            initRosterDropdown();
+            loadReports();
+        }
+
+        // ... (Scores Logic remains) ...
+
+        // ... (Schedule Logic remains) ...
+
+        // ... (Roster Logic remains) ...
+
+        function saveRoster() {
+            const team = document.getElementById('admin-roster-team').value;
+            rosterData[team] = currentRosterMembers;
+            saveAppData();
+            alert(`${team} Roster Saved!`);
+        }
+
+        // --- MATCH REPORT LOGIC ---
+        function loadReports() {
+            const week = parseInt(document.getElementById('report-week-select').value);
+            const gameFilter = document.getElementById('report-game-select').value;
+            const container = document.getElementById('match-reports-list');
+
+            const weekData = scheduleData.find(w => w.week === week);
+            if (!weekData || !weekData.matches) {
+                container.innerHTML = '<p class="text-muted">No matches found for this week.</p>';
+                return;
+            }
+
+            let matches = weekData.matches;
+            // Filter out BYES for reporting
+            matches = matches.filter(m => m.teamB !== 'BYE');
+
+            if (gameFilter !== 'all') {
+                matches = matches.filter(m => m.game === gameFilter);
+            }
+
+            container.innerHTML = matches.map(m => {
+                const reportId = `${week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '');
+                const report = matchReports[reportId] || {};
+                const scoreA = report.scoreA || '';
+                const scoreB = report.scoreB || '';
+                const ballchasingUrls = report.ballchasingUrls || [];
+
+                // Conditional HTML for Ballchasing Link
+                let rlField = '';
+                if (m.game === 'Rocket League') {
+                    rlField = `
+                    <div style="margin-bottom:1rem;">
+                        <label style="font-size:0.8rem; color:#94a3b8; display:block; margin-bottom:0.2rem;">Ballchasing Replay Links (3 Required)</label>
+                        <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                            ${[0, 1, 2, 3, 4].map(i => {
+                        const url = ballchasingUrls[i] || '';
+                        return `
+                                <div style="display:flex; flex-direction:column; gap:0.2rem; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px;">
+                                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                                        <input type="text" class="form-control" id="rep-rl-link-${reportId}-${i}" 
+                                            value="${url}" 
+                                            placeholder="Paste Ballchasing URL here" 
+                                            style="flex:1; font-size:0.85rem;">
+                                    </div>
+                                    <div style="font-size:0.7rem; color:#64748b; margin-left:2px;">
+                                        ${url ? `<a href="${url}" target="_blank" style="color:#4ade80;">View Saved Replay</a>` : 'Paste link to auto-fetch stats'}
+                                    </div>
+                                </div>
+                            `}).join('')}
+                        </div>
+                         <button class="btn btn-outline" style="margin-top:1rem; width:100%" onclick="fetchBallchasingStats('${reportId}', '${m.teamA}', '${m.teamB}')" title="Fetch Stats from Ballchasing">Fetch Stats</button>
+                    </div>`;
+                }
+
+                return `
+                    <div class="editor-card" style="border-left: 4px solid var(--accent-blue);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleReport('${reportId}')">
+                            <div>
+                                <div style="font-weight:bold; font-size:1.1rem;">${m.teamA} vs ${m.teamB}</div>
+                                <div style="font-size:0.8rem; color:#94a3b8;">${m.game}</div>
+                            </div>
+                            <div style="font-weight:bold; ${scoreA !== '' ? 'color:#4ade80' : 'color:#94a3b8'}">
+                                ${scoreA !== '' ? `${scoreA} - ${scoreB}` : 'Report Pending'}
+                            </div>
+                        </div>
+
+                        <div id="report-details-${reportId}" style="display:none; margin-top:1rem; border-top:1px solid #334155; padding-top:1rem;">
+                            
+                            ${rlField}
+
+                            <h4 style="color:white; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Match Score</h4>
+                            <div style="display:flex; align-items:center; justify-content:center; gap:2rem; margin-bottom:1.5rem;">
+                                <div style="flex:1; text-align:center;">
+                                    <label>${m.teamA}</label>
+                                    <input type="number" class="form-control" style="text-align:center; font-size:1.5rem;" id="rep-scoreA-${reportId}" value="${scoreA}">
+                                </div>
+                                <span style="font-size:1.5rem; font-weight:bold;">-</span>
+                                <div style="flex:1; text-align:center;">
+                                    <label>${m.teamB}</label>
+                                    <input type="number" class="form-control" style="text-align:center; font-size:1.5rem;" id="rep-scoreB-${reportId}" value="${scoreB}">
+                                </div>
+                            </div>
+
+                            <h4 style="color:white; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Player Stats</h4>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                                ${renderPlayerStatsInputs(m.teamA, m.game, reportId, report.stats || {})}
+                                ${renderPlayerStatsInputs(m.teamB, m.game, reportId, report.stats || {})}
+                            </div>
+
+                            <button class="btn btn-primary" style="width:100%; margin-top:1.5rem;" onclick="saveReport('${reportId}', '${week}')">Save Report</button>
+                        </div>
+                    </div>
+                `}).join('');
+        }
+
+        // --- BALLCHASING API LOGIC ---
+        const BALLCHASING_API_KEY = 'J1UM5OTMDPJsrKHtqWRLjyinwHeEJh6ilSdBRnnG';
+
+        async function fetchBallchasingStats(reportId, teamA, teamB) {
+            const fetchBtn = document.querySelector(`#report-details-${reportId} button.btn-outline`);
+            const originalText = fetchBtn.textContent;
+            fetchBtn.textContent = 'Processing...';
+            fetchBtn.disabled = true;
+
+            try {
+                const replayIds = [];
+
+                // 1. Gather URLs
+                for (let i = 0; i < 5; i++) {
+                    const urlInput = document.getElementById(`rep-rl-link-${reportId}-${i}`);
+
+                    if (urlInput && urlInput.value.trim() !== '') {
+                        const match = urlInput.value.trim().match(/\/replay\/([a-zA-Z0-9-]+)/);
+                        if (match) replayIds.push(match[1]);
+                    }
+                }
+
+                if (replayIds.length === 0) {
+                    alert('No stats fetched. Please paste valid ballchasing.com URLs.');
+                    return;
+                }
+
+                // 2. Fetch Stats
+                fetchBtn.textContent = 'Fetching Stats...';
+
+                const statsMap = {};
+                let winsA = 0;
+                let winsB = 0;
+
+                for (const replayId of replayIds) {
+                    const response = await fetch(`https://ballchasing.com/api/replays/${replayId}`, {
+                        headers: { 'Authorization': BALLCHASING_API_KEY }
+                    });
+
+                    if (!response.ok) throw new Error(`Fetch Error ${response.status}: ${response.statusText}`);
+                    const data = await response.json();
+
+                    // Process Data
+                    const processSide = (side) => {
+                        side.players.forEach(p => {
+                            if (!statsMap[p.name]) statsMap[p.name] = { k: 0, d: 0, a: 0 };
+                            statsMap[p.name].k += p.stats.core.goals;
+                            statsMap[p.name].d += p.stats.core.saves;
+                            statsMap[p.name].a += p.stats.core.assists;
+                        });
+                    };
+
+                    processSide(data.blue);
+                    processSide(data.orange);
+
+                    // Winner Calculation
+                    const blueGoals = data.blue.stats.core.goals;
+                    const orangeGoals = data.orange.stats.core.goals;
+                    const rosterA = rosterData[teamA] || [];
+                    const isBlueA = data.blue.players.some(bp => rosterA.some(ra => ra.name.toLowerCase() === bp.name.toLowerCase()));
+
+                    if (isBlueA) {
+                        if (blueGoals > orangeGoals) winsA++;
+                        else winsB++;
+                    } else {
+                        if (orangeGoals > blueGoals) winsA++;
+                        else winsB++;
+                    }
+                }
+
+                // 3. Update DOM
+                document.getElementById(`rep-scoreA-${reportId}`).value = winsA;
+                document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
+
+                Object.keys(statsMap).forEach(playerName => {
+                    let row = document.querySelector(`#report-details-${reportId} .stat-row-input[data-player="${playerName}"]`);
+                    if (!row) {
+                        // Case insensitive search
+                        const allRows = document.querySelectorAll(`#report-details-${reportId} .stat-row-input`);
+                        for (const r of allRows) {
+                            if (r.dataset.player.toLowerCase() === playerName.toLowerCase()) {
+                                row = r;
+                                break;
+                            }
+                        }
+                    }
+                    if (row) {
+                        row.querySelector('[data-stat="k"]').value = statsMap[playerName].k;
+                        row.querySelector('[data-stat="d"]').value = statsMap[playerName].d;
+                        row.querySelector('[data-stat="a"]').value = statsMap[playerName].a;
+                    }
+                });
+
+                alert('Stats Populated! Please click "Save Report" to persist changes.');
+
+            } catch (err) {
+                console.error(err);
+                alert('Error: ' + err.message);
+            } finally {
+                fetchBtn.textContent = originalText;
+                fetchBtn.disabled = false;
+            }
+        }
+
+
+        function renderPlayerStatsInputs(team, game, reportId, stats) {
+            // Get roster filtered by game
+            const roster = (rosterData[team] || []).filter(p => p.game === game);
+
+            if (roster.length === 0) return `<div class="editor-card" style="background:rgba(0,0,0,0.2)"><p style="text-align:center">No Roster for ${team} (${game})</p></div>`;
+
+            return `
+                <div class="editor-card" style="background:rgba(0,0,0,0.2); border:none; padding:1rem;">
+                    <h5 style="margin-top:0; text-align:center;">${team}</h5>
+                    ${roster.map(p => {
+                const currentStats = stats[p.name] || { k: 0, d: 0, a: 0 };
+                return `
+                        <div class="stat-row-input" data-player="${p.name}" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; font-size:0.9rem;">
+                            <span style="width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</span>
+                            <div style="display:flex; gap:0.2rem;">
+                                <input data-stat="k" placeholder="K" title="Kills" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${currentStats.k || 0}">
+                                <input data-stat="d" placeholder="D" title="Deaths" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${currentStats.d || 0}">
+                                <input data-stat="a" placeholder="A" title="Assists" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${currentStats.a || 0}">
+                            </div>
+                        </div>
+                    `}).join('')}
+                </div>
+            `;
+        }
+
+        function toggleReport(id) {
+            const el = document.getElementById(`report-details-${id}`);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function saveReport(reportId, week) {
+            const scoreA = document.getElementById(`rep-scoreA-${reportId}`).value;
+            const scoreB = document.getElementById(`rep-scoreB-${reportId}`).value;
+
+            // Get Ballchasing URLs
+            const ballchasingUrls = [];
+            for (let i = 0; i < 5; i++) {
+                const input = document.getElementById(`rep-rl-link-${reportId}-${i}`);
+                if (input) ballchasingUrls.push(input.value);
+            }
+
+            const card = document.getElementById(`report-details-${reportId}`);
+            const statRows = card.querySelectorAll('.stat-row-input');
+            const stats = {};
+
+            statRows.forEach(row => {
+                const player = row.dataset.player;
+                const k = row.querySelector('[data-stat="k"]').value;
+                const d = row.querySelector('[data-stat="d"]').value;
+                const a = row.querySelector('[data-stat="a"]').value;
+                stats[player] = { k, d, a };
+            });
+
+            // Reconstruct Match Object for API
+            // Find the match in scheduleData to get base details (ID, etc)
+            // reportId logic: `${m.week}-${m.game}-${m.teamA}-${m.teamB}`
+
+            const weekData = scheduleData.find(w => w.week == week);
+            if (!weekData) return alert("Week not found locally");
+
+            const matchIndex = weekData.matches.findIndex(m => {
+                const rId = `${m.week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '');
+                return rId === reportId;
+            });
+
+            if (matchIndex === -1) return alert("Match not found locally");
+            const match = weekData.matches[matchIndex];
+
+            // Payload
+            const payload = {
+                id: match.id, // Prefer ID
+                week: match.week,
+                game: match.game,
+                teamA: match.teamA,
+                teamB: match.teamB,
+                date: match.date || weekData.date,
+                time: match.time,
+                scoreA: parseInt(scoreA) || 0,
+                scoreB: parseInt(scoreB) || 0,
+                status: (scoreA !== '' && scoreB !== '') ? 'FINAL' : 'SCHEDULED', // Auto-finalize if scores present
+                reportData: {
+                    scoreA, scoreB, ballchasingUrls, stats
+                }
+            };
+
+            try {
+                const res = await fetch('/.netlify/functions/save-match', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Save Failed');
+
+                alert('Match Report Saved!');
+                await loadAppData();
+                loadReports();
+            } catch (e) {
+                alert("Error saving report: " + e.message);
+            }
+        }
+
+        function renderScoresEditor() {
+            const container = document.getElementById('scores-list');
+            const games = ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'];
+            container.innerHTML = scores.map((s, i) => `
+                <div class="editor-card" style="display:flex; gap:1rem; align-items:center;" data-id="${s.id || ''}">
+                    <select class="form-control" style="width:150px">
+                         ${games.map(g => `<option value="${g}" ${s.game === g ? 'selected' : ''}>${g}</option>`).join('')}
+                    </select>
+                    <input class="form-control" value="${s.teamA}" placeholder="Team A">
+                    <input type="number" class="form-control" value="${s.scoreA}" style="width:60px">
+                    <span>VS</span>
+                    <input type="number" class="form-control" value="${s.scoreB}" style="width:60px">
+                    <input class="form-control" value="${s.teamB}" placeholder="Team B">
+                    <select class="form-control" style="width:100px">
+                        <option value="LIVE" ${s.status === 'LIVE' ? 'selected' : ''}>LIVE</option>
+                        <option value="FINAL" ${s.status === 'FINAL' ? 'selected' : ''}>FINAL</option>
+                        <option value="SCHEDULED" ${s.status === 'SCHEDULED' ? 'selected' : ''}>SCHEDULED</option>
+                    </select>
+                    <button class="btn btn-outline" onclick="removeScore(${i})" style="color:red; border-color:red;">X</button>
+                </div>
+            `).join('');
+        }
+
+        async function saveScores() {
+            const container = document.getElementById('scores-list');
+            const newScores = [];
+            const rows = container.children.length;
+
+            for (let i = 0; i < rows; i++) {
+                const row = container.children[i];
+                const id = row.dataset.id; // Get ID
+                const inputs = row.querySelectorAll('input, select');
+
+                newScores.push({
+                    id: id ? parseInt(id) : null,
+                    game: inputs[0].value,
+                    teamA: inputs[1].value,
+                    scoreA: parseInt(inputs[2].value),
+                    scoreB: parseInt(inputs[3].value),
+                    teamB: inputs[4].value,
+                    status: inputs[5].value,
+                    // Default values for required fields if missing
+                    week: 1, // Assume week 1 or manual override needed? Ticker usually just quick edits usually.
+                    // Actually, Ticker items should ideally be sourced from real matches.
+                    // For now, let's just save.
+                    date: 'Jan 19',
+                    time: '8:00 PM EST'
+                });
+            }
+
+            try {
+                const res = await fetch('/.netlify/functions/save-match', {
+                    method: 'POST',
+                    body: JSON.stringify(newScores),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Save Failed');
+
+                alert('Scores Saved!');
+                await loadAppData(); // Reload to get stable IDs
+                renderScoresEditor();
+            } catch (e) {
+                alert("Error saving: " + e.message);
+            }
+        }
+
+        function addScoreRow() {
+            scores.push({ game: 'Rocket League', teamA: 'Team A', teamB: 'Team B', scoreA: 0, scoreB: 0, status: 'UPCOMING' });
+            renderScoresEditor();
+        }
+
+        function removeScore(index) {
+            scores.splice(index, 1);
+            renderScoresEditor();
+        }
+
+        // --- SCHEDULE LOGIC ---
+        function loadScheduleEditor() {
+            const week = parseInt(document.getElementById('admin-week-select').value);
+            const weekData = scheduleData.find(w => w.week === week);
+            const container = document.getElementById('schedule-editor-list');
+
+            if (!weekData) return;
+
+            const teamList = Object.keys(teamLogos).sort();
+
+            const generateTeamOptions = (selected) => {
+                return teamList.map(t => `<option value="${t}" ${t === selected ? 'selected' : ''}>${t}</option>`).join('');
+            };
+
+            // Group matches into pairings (Series)
+            const pairings = [];
+            const seen = new Set();
+
+            // If matches exist, group them
+            if (weekData.matches && weekData.matches.length > 0) {
+                weekData.matches.forEach(m => {
+                    // Create a unique key for the matchup (A vs B)
+                    // We simply assume the first time we see A vs B, it's the series definition
+                    // Note: This relies on the fact that our data is generated in blocks of 4
+                    const key = `${m.teamA}-${m.teamB}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        pairings.push({ teamA: m.teamA, teamB: m.teamB });
+                    }
+                });
+            } else {
+                // Default clean slate if no pairings found (rare)
+                // Add one empty row
+                pairings.push({ teamA: 'Baylor', teamB: 'Boise State' });
+            }
+
+            container.innerHTML = pairings.map((p, i) => `
+                <div class="editor-card" style="padding:1rem;">
+                    <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">Series Pairing ${i + 1}</h4>
+                    <div style="display:flex; gap:1rem; align-items:center;">
+                        <div style="flex:1">
+                            <label style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Team A</label>
+                            <select class="form-control" id="sch-teamA-${week}-${i}">
+                                ${generateTeamOptions(p.teamA)}
+                            </select>
+                        </div>
+                        <span style="font-weight:bold; color:#ef4444;">VS</span>
+                        <div style="flex:1">
+                            <label style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Team B</label>
+                            <select class="form-control" id="sch-teamB-${week}-${i}">
+                                ${generateTeamOptions(p.teamB)}
+                            </select>
+                        </div>
+                         <button class="btn btn-outline" onclick="removeSeriesRow(this)" style="color:red; border-color:red; margin-top: 1.2rem;">X</button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add "Add Pairing" button if not exists
+            if (!document.getElementById('add-pairing-btn')) {
+                const addBtn = document.createElement('button');
+                addBtn.className = 'btn btn-outline';
+                addBtn.innerText = '+ Add New Pairing';
+                addBtn.id = 'add-pairing-btn';
+                addBtn.style.marginTop = '1rem';
+                addBtn.onclick = () => addSeriesRow(week);
+                container.after(addBtn);
+            }
+        }
+
+        function addSeriesRow(week) {
+            const container = document.getElementById('schedule-editor-list');
+            const teamList = Object.keys(teamLogos).sort();
+            const generateTeamOptions = () => teamList.map(t => `<option value="${t}">${t}</option>`).join('');
+            const i = container.children.length; // Approximate index
+
+            const div = document.createElement('div');
+            div.className = 'editor-card';
+            div.style.padding = '1rem';
+            div.innerHTML = `
+                <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">New Series Pairing</h4>
+                <div style="display:flex; gap:1rem; align-items:center;">
+                    <div style="flex:1">
+                        <label style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Team A</label>
+                        <select class="form-control" id="sch-teamA-${week}-${i}">
+                            ${generateTeamOptions()}
+                        </select>
+                    </div>
+                    <span style="font-weight:bold; color:#ef4444;">VS</span>
+                    <div style="flex:1">
+                        <label style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Team B</label>
+                        <select class="form-control" id="sch-teamB-${week}-${i}">
+                            ${generateTeamOptions()}
+                        </select>
+                    </div>
+                    <button class="btn btn-outline" onclick="removeSeriesRow(this)" style="color:red; border-color:red; margin-top: 1.2rem;">X</button>
+                </div>
+             `;
+            container.appendChild(div);
+        }
+
+        function removeSeriesRow(btn) {
+            btn.closest('.editor-card').remove();
+        }
+
+        async function saveSchedule() {
+            const week = parseInt(document.getElementById('admin-week-select').value);
+            const container = document.getElementById('schedule-editor-list');
+            const rows = container.querySelectorAll('.editor-card');
+
+            let newMatches = [];
+
+            rows.forEach((row, index) => {
+                // Dynamically find inputs within the row
+                const selects = row.querySelectorAll('select');
+                if (selects.length >= 2) {
+                    const teamA = selects[0].value;
+                    const teamB = selects[1].value;
+
+                    // Auto-generate the series of games
+                    // using global generateSeries function from script.js
+                    // Standard Time: 20:00
+                    const seriesMatches = generateSeries(teamA, teamB, '20:00');
+                    // Add week info
+                    seriesMatches.forEach(m => m.week = week);
+
+                    newMatches = [...newMatches, ...seriesMatches];
+                }
+            });
+
+            // Send to API
+            try {
+                const res = await fetch('/.netlify/functions/save-match', {
+                    method: 'POST',
+                    body: JSON.stringify(newMatches),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Save Failed');
+
+                alert(`Week ${week} Schedule Saved! Re-generated ${newMatches.length} games.`);
+                await loadAppData();
+                loadScheduleEditor();
+            } catch (e) {
+                alert("Error saving schedule: " + e.message);
+            }
+        }
+
+        // --- ROSTER LOGIC ---
+        let currentRosterMembers = [];
+
+        function initRosterDropdown() {
+            const select = document.getElementById('admin-roster-team');
+            const teams = Object.keys(teamLogos).filter(t => t !== 'BYE').sort();
+            select.innerHTML = teams.map(t => `<option value="${t}">${t}</option>`).join('');
+            loadRosterEditor(); // Load first team
+        }
+
+        function loadRosterEditor() {
+            const team = document.getElementById('admin-roster-team').value;
+            // rosterData is global from script.js
+            currentRosterMembers = JSON.parse(JSON.stringify(rosterData[team] || [])); // Deep copy
+            renderRosterList();
+        }
+
+        function renderRosterList() {
+            const container = document.getElementById('roster-editor-list');
+            const filter = document.getElementById('admin-roster-game-filter').value;
+
+            const games = ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'];
+
+            container.innerHTML = currentRosterMembers.map((p, i) => {
+                if (filter !== 'all' && p.game !== filter) return '';
+
+                return `
+                <div class="editor-card" style="display:flex; gap:1rem; align-items:center;">
+                    <input class="form-control" value="${p.name}" placeholder="Player Name" onchange="updateRosterMember(${i}, 'name', this.value)">
+                    <select class="form-control" onchange="updateRosterMember(${i}, 'game', this.value)">
+                        ${games.map(g => `<option value="${g}" ${p.game === g ? 'selected' : ''}>${g}</option>`).join('')}
+                    </select>
+                    <input class="form-control" value="${p.role}" placeholder="Role" onchange="updateRosterMember(${i}, 'role', this.value)">
+                    <button class="btn btn-outline" onclick="removeRosterMember(${i})" style="color:red; border-color:red;">X</button>
+                </div>
+            `}).join('');
+        }
+
+        function updateRosterMember(index, field, value) {
+            currentRosterMembers[index][field] = value;
+            // If we filter, re-render? No, it might jump. That is fine.
+        }
+
+        function addPlayerRow() {
+            const filter = document.getElementById('admin-roster-game-filter').value;
+            const defaultGame = filter === 'all' ? 'Rocket League' : filter;
+
+            currentRosterMembers.push({ name: '', game: defaultGame, role: '' });
+            renderRosterList();
+        }
+
+        function removeRosterMember(index) {
+            currentRosterMembers.splice(index, 1);
+            renderRosterList();
+        }
+
+        async function saveRoster() {
+            const team = document.getElementById('admin-roster-team').value;
+            // Use currentRosterMembers
+
+            try {
+                const res = await fetch('/.netlify/functions/save-roster', {
+                    method: 'POST',
+                    body: JSON.stringify({ team, players: currentRosterMembers }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Save Failed');
+                alert(`${team} Roster Saved!`);
+                await loadAppData();
+            } catch (e) {
+                alert("Error saving roster: " + e.message);
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch | PEC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;700&family=Teko:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Main Navigation -->
+    <header class="main-header">
+        <div class="container header-inner">
+            <a href="index.html" class="logo">PEC<span class="logo-accent">.</span></a>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="schedule.html">Schedule</a></li>
+                    <li><a href="standings.html">Standings</a></li>
+                    <li><a href="teams.html">Teams</a></li>
+                    <li><a href="watch.html" class="active">Watch</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <button class="btn btn-outline" style="margin-right:0.5rem">Log In</button>
+                <a href="admin.html" class="btn btn-primary" style="text-decoration:none;">Admin</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="watch-hero container">
+            <div class="section-header">
+                <h2>Featured Stream</h2>
+            </div>
+
+            <div class="featured-stream-container">
+                <div class="stream-match-info">
+                    <div class="stream-teams">
+                        <div class="stream-team">
+                            <div class="stream-team-logo" id="featured-teamA-logo"></div>
+                            <span id="featured-teamA-name">Team A</span>
+                        </div>
+                        <div class="stream-vs">VS</div>
+                        <div class="stream-team">
+                            <div class="stream-team-logo" id="featured-teamB-logo"></div>
+                            <span id="featured-teamB-name">Team B</span>
+                        </div>
+                    </div>
+                    <div class="stream-meta" id="featured-meta">
+                        LIVE NOW • Grand Finals
+                    </div>
+                </div>
+
+                <div class="video-embed-wrapper">
+                    <iframe src="https://player.twitch.tv/?channel=rocketleague&parent=localhost" height="100%"
+                        width="100%" allowfullscreen>
+                    </iframe>
+                </div>
+            </div>
+        </section>
+
+        <section class="schools-directory container" style="margin-top: 3rem;">
+            <div class="section-header">
+                <h2>School Channels</h2>
+            </div>
+            <div class="channel-grid" id="school-channels-grid">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container footer-inner">
+            <div class="footer-brand">
+                <h2>PEC</h2>
+                <p>&copy; 2026 Power Esports Conference</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Terms</a>
+                <a href="#">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js?v=4"></script>
+</body>
+
+</html>

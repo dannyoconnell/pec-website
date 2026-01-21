@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PEC | Power Esports Conference</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;700&family=Teko:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Top Bar: Scores Ticker -->
+    <div class="score-ticker-container">
+        <div class="ticker-label">LIVE SCORES</div>
+        <div class="ticker-wrapper">
+            <div class="ticker-content" id="score-ticker">
+                <!-- Ticker items injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Navigation -->
+    <header class="main-header">
+        <div class="container header-inner">
+            <a href="#" class="logo">PEC<span class="logo-accent">.</span></a>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html" class="active">Home</a></li>
+                    <li><a href="schedule.html">Schedule</a></li>
+                    <li><a href="standings.html">Standings</a></li>
+                    <li><a href="teams.html">Teams</a></li>
+                    <li><a href="watch.html">Watch</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <button class="btn btn-outline" style="margin-right:0.5rem">Log In</button>
+                <a href="admin.html" class="btn btn-primary" style="text-decoration:none;">Admin</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Game Filter Nav -->
+    <nav class="game-nav">
+        <div class="container game-nav-inner">
+            <button class="game-filter active" data-game="all">All Games</button>
+            <button class="game-filter" data-game="Rocket League">Rocket League</button>
+            <button class="game-filter" data-game="Overwatch 2">Overwatch 2</button>
+            <button class="game-filter" data-game="Smash Bros">Smash Bros</button>
+            <button class="game-filter" data-game="Valorant">Valorant</button>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Hero Section: Magazine Grid -->
+        <section class="hero-section container">
+            <div class="hero-grid">
+                <div class="hero-main">
+                    <div class="hero-card large">
+                        <!-- Used a placeholder image service that supports custom text/colors -->
+                        <img src="https://placehold.co/800x600/1e293b/ef4444?text=Championship+Finals+Set"
+                            alt="Championship Finals">
+                        <div class="hero-overlay">
+                            <span class="tag">Breaking</span>
+                            <h1>Grand Finals Matchup Decided: Titans vs. Vipers</h1>
+                            <p>Everything you need to know about the upcoming showdown this weekend.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-side">
+                    <div class="hero-card small">
+                        <img src="https://placehold.co/400x300/1e293b/fbbf24?text=MVP+Race" alt="MVP Race">
+                        <div class="hero-overlay">
+                            <span class="tag">Analysis</span>
+                            <h3>MVP Race: Who is leading the pack?</h3>
+                        </div>
+                    </div>
+                    <div class="hero-card small">
+                        <img src="https://placehold.co/400x300/1e293b/38bdf8?text=Patch+Notes" alt="Patch Notes">
+                        <div class="hero-overlay">
+                            <span class="tag">Update</span>
+                            <h3>Week 5 Patch Notes Impact</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Weekly Schedule -->
+        <section class="schedule-section container">
+            <div class="section-header">
+                <h2>Weekly Schedule</h2>
+                <div class="week-selector">
+                    <span class="active">Week 5</span>
+                    <span>Week 6</span>
+                    <span>Week 7</span>
+                </div>
+            </div>
+
+            <div class="schedule-grid" id="schedule-grid">
+                <!-- Schedule items injected via JS -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container footer-inner">
+            <div class="footer-brand">
+                <h2>PEC</h2>
+                <p>&copy; 2026 Power Esports Conference</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Terms</a>
+                <a href="#">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js?v=4"></script>
+</body>
+
+</html>
