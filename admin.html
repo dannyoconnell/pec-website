@@ -611,7 +611,10 @@
                     body: JSON.stringify(newScores),
                     headers: { 'Content-Type': 'application/json' }
                 });
-                if (!res.ok) throw new Error('Save Failed');
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || 'Save Failed');
+                }
 
                 alert('Scores Saved!');
                 await loadAppData(); // Reload to get stable IDs
@@ -761,13 +764,17 @@
             });
 
             // Send to API
+            // Send to API
             try {
                 const res = await fetch('/.netlify/functions/save-match', {
                     method: 'POST',
                     body: JSON.stringify(newMatches),
                     headers: { 'Content-Type': 'application/json' }
                 });
-                if (!res.ok) throw new Error('Save Failed');
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || 'Save Failed');
+                }
 
                 alert(`Week ${week} Schedule Saved! Re-generated ${newMatches.length} games.`);
                 await loadAppData();
@@ -843,7 +850,10 @@
                     body: JSON.stringify({ team, players: currentRosterMembers }),
                     headers: { 'Content-Type': 'application/json' }
                 });
-                if (!res.ok) throw new Error('Save Failed');
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || 'Save Failed');
+                }
                 alert(`${team} Roster Saved!`);
                 await loadAppData();
             } catch (e) {
