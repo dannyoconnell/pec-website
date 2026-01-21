@@ -634,10 +634,9 @@
         // --- SCHEDULE LOGIC ---
         function loadScheduleEditor() {
             const week = parseInt(document.getElementById('admin-week-select').value);
-            const weekData = scheduleData.find(w => w.week === week);
+            // Default to empty object if not found
+            const weekData = scheduleData.find(w => w.week === week) || { matches: [] };
             const container = document.getElementById('schedule-editor-list');
-
-            if (!weekData) return;
 
             const teamList = Object.keys(teamLogos).sort();
 
@@ -662,8 +661,8 @@
                     }
                 });
             } else {
-                // Default clean slate if no pairings found (rare)
-                // Add one empty row
+                // Default clean slate if no pairings found (Empty DB)
+                // Add one empty row so user can start
                 pairings.push({ teamA: 'Baylor', teamB: 'Boise State' });
             }
 
