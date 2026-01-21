@@ -17,8 +17,18 @@ export default async (req, context) => {
     const sql = neon(connString);
 
     try {
-        const data = await req.json(); // Expects array or single object
-        const items = Array.isArray(data) ? data : [data];
+        const body = await req.json();
+        let items = [];
+
+        // Check for "Replace Week" mode (used by Schedule Editor)
+        if (body.replaceWeek && body.week && Array.isArray(body.matches)) {
+            console.log(`Replacing matches for Week ${body.week}`);
+            await sql`DELETE FROM matches WHERE week = ${body.week}`;
+            items = body.matches;
+        } else {
+            // Standard mode (Array or Single Object)
+            items = Array.isArray(body) ? body : [body];
+        }
 
         for (const m of items) {
             // Basic Validation

@@ -768,7 +768,11 @@
             try {
                 const res = await fetch('/.netlify/functions/save-match', {
                     method: 'POST',
-                    body: JSON.stringify(newMatches),
+                    body: JSON.stringify({
+                        replaceWeek: true,
+                        week: week,
+                        matches: newMatches
+                    }),
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (!res.ok) {
