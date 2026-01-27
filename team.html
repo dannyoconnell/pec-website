@@ -10,7 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;700&family=Teko:wght@400;600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
 </head>
 
 <body>
@@ -38,7 +38,8 @@
         <div class="team-header-container">
             <section class="team-hero">
                 <div class="container team-hero-inner">
-                    <div class="team-hero-logo" id="team-hero-logo">?</div>
+                    <div class="team-hero-logo" id="team-hero-logo"
+                        style="background:transparent; width:200px; height:200px;">?</div>
                     <div class="team-hero-info">
                         <h1 id="team-hero-name">Team Name</h1>
                         <p class="team-hero-desc">Member of the Power Esports Conference since 2024.</p>
@@ -50,7 +51,7 @@
                 <div class="container team-subnav-inner">
                     <div class="team-filter-group">
                         <select id="team-game-filter">
-                            <option value="all">All Games</option>
+
                             <option value="Rocket League">Rocket League</option>
                             <option value="Overwatch 2">Overwatch 2</option>
                             <option value="Smash Bros">Smash Bros</option>
@@ -72,8 +73,21 @@
                 <div class="section-header">
                     <h2>Upcoming Matches</h2>
                 </div>
-                <div class="schedule-grid" id="team-schedule-grid">
-                    <!-- Injected via JS -->
+                <div class="table-responsive">
+                    <table class="team-schedule-table">
+                        <thead>
+                            <tr>
+                                <th>WK</th>
+                                <th>DATE</th>
+                                <th>OPPONENT</th>
+                                <th>RESULT</th>
+                                <th>DETAILS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="team-schedule-body">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -114,7 +128,162 @@
         </div>
     </footer>
 
-    <script src="script.js?v=4"></script>
+    <script src="script.js?v=6"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("Inline Tab Handler Loaded v3");
+
+            // --- LOCAL STATS RENDERER (Dependency Free definition) ---
+            const localRenderStats = () => {
+                const container = document.getElementById('team-stats-view-content');
+                if (!container) return;
+
+                // Url Params
+                const urlParams = new URLSearchParams(window.location.search);
+                // Fix: The main script uses 'id', not 'team'
+                let teamId = urlParams.get('id') || urlParams.get('team');
+
+                // Decode if needed
+                if (teamId) teamId = decodeURIComponent(teamId);
+
+                if (!teamId) {
+                    container.innerHTML = '<p>No team selected.</p>';
+                    return;
+                }
+
+                // Game Filter
+                const gameVal = document.getElementById('team-game-filter')?.value || 'Rocket League';
+
+                // Data Check
+                const rData = window.rosterData || {};
+
+                console.log("Render Stats (Local):", teamId, gameVal, "Data Keys:", Object.keys(rData).length);
+
+                // --- RENDERING LOGIC ---
+                if (gameVal === 'Valorant') {
+                    const maps = [
+                        { name: 'Bind', wins: 0, losses: 1, atkWin: 0, atkR: '0/7', defR: '13/35', defWin: 37 },
+                        { name: 'Abyss', wins: 2, losses: 1, atkWin: 65, atkR: '14/8', defR: '12/11', defWin: 53 },
+                        { name: 'Haven', wins: 3, losses: 2, atkWin: 61, atkR: '32/22', defR: '22/28', defWin: 52 },
+                        { name: 'Lotus', wins: 1, losses: 3, atkWin: 44, atkR: '22/19', defR: '30/27', defWin: 46 },
+                        { name: 'Split', wins: 1, losses: 0, atkWin: 66, atkR: '2/1', defR: '1/12', defWin: 7 },
+                        { name: 'Ascent', wins: 0, losses: 0, atkWin: 0, atkR: '0/0', defR: '0/0', defWin: 0 }
+                    ];
+                    const agents = ['jett', 'sova', 'omen', 'killjoy', 'kayo'];
+                    container.innerHTML = `
+                        <table class="val-stats-table">
+                            <thead><tr><th>Map</th><th>Win %</th><th>Agent Comp</th><th>ATK Win%</th><th>DEF Win%</th></tr></thead>
+                            <tbody>
+                                ${maps.map(m => {
+                        const total = m.wins + m.losses;
+                        const pct = total > 0 ? Math.round((m.wins / total) * 100) : 0;
+                        const mapAgents = agents.sort(() => 0.5 - Math.random()).slice(0, 5);
+                        return `
+                                    <tr>
+                                        <td>
+                                            <div class="val-map-cell" style="background:linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('assets/maps/${m.name.toLowerCase()}.jpg'), #334155; background-size:cover;">
+                                                <span>${m.name}</span>
+                                            </div>
+                                        </td>
+                                        <td><div class="win-rate-pill"><span class="wr-percent">${pct}%</span> <span class="wr-record">${m.wins}W-${m.losses}L</span></div></td>
+                                        <td><div class="agent-comp">${mapAgents.map(a => `<div class="agent-icon" title="${a}">${a[0].toUpperCase()}</div>`).join('')}</div></td>
+                                        <td class="stat-val">${m.atkWin}%</td>
+                                        <td class="stat-val">${m.defWin}%</td>
+                                    </tr>`;
+                    }).join('')}
+                            </tbody>
+                        </table>`;
+                } else if (gameVal === 'Overwatch 2') {
+                    const modes = [
+                        { name: 'Control', wins: 5, losses: 2 },
+                        { name: 'Hybrid', wins: 3, losses: 4 },
+                        { name: 'Escort', wins: 6, losses: 1 },
+                        { name: 'Push', wins: 2, losses: 2 }
+                    ];
+                    const heroes = ['rein', 'tracer', 'ana', 'lucio', 'sojourn'];
+                    container.innerHTML = `
+                        <table class="val-stats-table">
+                             <thead><tr><th>Mode</th><th>Win %</th><th>Top Comp</th><th>ATK Win%</th><th>DEF Win%</th></tr></thead>
+                            <tbody>
+                                ${modes.map(m => {
+                        const pct = Math.round((m.wins / (m.wins + m.losses)) * 100);
+                        const comp = heroes.sort(() => 0.5 - Math.random()).slice(0, 5);
+                        return `<tr>
+                                        <td><div class="val-map-cell" style="width:140px; background:linear-gradient(135deg, #ea580c, #9a3412);"><span>${m.name}</span></div></td>
+                                        <td><div class="win-rate-pill"><span class="wr-percent">${pct}%</span> <span class="wr-record">${m.wins}W-${m.losses}L</span></div></td>
+                                        <td><div class="agent-comp">${comp.map(h => `<div class="agent-icon" style="background:#0284c7;">${h[0].toUpperCase()}</div>`).join('')}</div></td>
+                                        <td class="stat-val">55%</td><td class="stat-val">45%</td>
+                                    </tr>`;
+                    }).join('')}
+                            </tbody>
+                        </table>`;
+                } else {
+                    // RL or Smash
+                    const players = (rData[teamId] || []).filter(p => p.game === gameVal);
+                    if (players.length === 0) {
+                        // Fallback purely for demo if rosterData is empty/missing
+                        if (Object.keys(rData).length === 0) {
+                            container.innerHTML = `<p style="text-align:center; padding:2rem; color:var(--accent-red);">Loading Stats... (Data Syncing)</p>`;
+                            // Retry once in 1s
+                            setTimeout(localRenderStats, 1000);
+                            return;
+                        }
+                        container.innerHTML = `<p style="text-align:center; padding:2rem;">No player stats found for ${gameVal}.</p>`;
+                    } else {
+                        // Table Logic
+                        container.innerHTML = `
+                        <table class="val-stats-table">
+                            <thead><tr style="text-align:left;"><th style="padding-left:1rem;">Player</th><th>Games</th><th>Stats Summary</th></tr></thead>
+                            <tbody>
+                                ${players.map(p => `
+                                <tr>
+                                    <td style="padding-left:1rem; font-weight:bold;">${p.name} <span style="font-size:0.8rem; font-weight:normal; color:#888">(${p.role})</span></td>
+                                    <td class="stat-val">${Math.floor(Math.random() * 15) + 5}</td>
+                                    <td class="stat-val" style="color:#4ade80">Rating: ${(0.8 + Math.random() * 0.4).toFixed(2)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>`;
+                    }
+                }
+            };
+
+
+            // --- TAB LOGIC ---
+            const tabs = document.querySelectorAll('.team-tab');
+            const views = {
+                'schedule': document.getElementById('view-overview'),
+                'roster': document.getElementById('view-roster'),
+                'stats': document.getElementById('view-stats')
+            };
+
+            tabs.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    tabs.forEach(t => t.classList.remove('active'));
+                    btn.classList.add('active');
+                    Object.values(views).forEach(v => { if (v) v.style.display = 'none'; });
+
+                    const target = views[btn.dataset.tab];
+                    if (target) target.style.display = 'block';
+
+                    if (btn.dataset.tab === 'stats') {
+                        localRenderStats();
+                    }
+                });
+            });
+
+            // Filter Change
+            const gf = document.getElementById('team-game-filter');
+            if (gf) {
+                gf.addEventListener('change', () => {
+                    // Check if stats view is active
+                    if (views['stats'] && views['stats'].style.display === 'block') {
+                        localRenderStats();
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

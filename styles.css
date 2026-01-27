@@ -193,7 +193,7 @@ body {
     display: flex;
     gap: 2rem;
     padding-left: 1rem;
-    animation: ticker-slide 30s linear infinite;
+    animation: ticker-slide 60s linear infinite;
     white-space: nowrap;
 }
 
@@ -311,7 +311,9 @@ body {
 
 /* Weekly Schedule */
 .schedule-section {
-    padding: 2rem 1rem 4rem;
+    padding: 6rem 1rem 4rem;
+    scroll-margin-top: 140px;
+    /* Offset for sticky header */
 }
 
 .section-header {
@@ -412,9 +414,8 @@ select:focus {
 .team-logo {
     width: 50px;
     height: 50px;
-    background: #ffffff;
+    background: transparent;
     /* Placeholder */
-    border-radius: 50%;
     margin: 0 auto 0.5rem;
     display: flex;
     align-items: center;
@@ -574,8 +575,7 @@ select:focus {
 .standings-team-logo {
     width: 30px;
     height: 30px;
-    background: #ffffff;
-    border-radius: 50%;
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -613,10 +613,9 @@ select:focus {
 }
 
 .team-card-logo {
-    width: 60px;
-    height: 60px;
-    background: #ffffff;
-    border-radius: 50%;
+    width: 150px;
+    height: 150px;
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -647,17 +646,15 @@ select:focus {
 }
 
 .team-hero-logo {
-    width: 150px;
-    height: 150px;
-    background: #ffffff;
-    border-radius: 50%;
+    width: 250px;
+    height: 250px;
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 3rem;
     font-weight: 700;
     color: white;
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
 }
 
 .team-hero-info h1 {
@@ -704,7 +701,7 @@ select:focus {
 .banner-logo {
     width: 150px;
     height: 150px;
-    background: #ffffff;
+    background: transparent;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -712,7 +709,7 @@ select:focus {
     font-size: 3rem;
     font-weight: 700;
     color: white;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    /* Box shadow removed as it looks odd without bg */
 }
 
 .banner-team h1 {
@@ -768,7 +765,7 @@ select:focus {
 .score-logo {
     width: 100px;
     height: 100px;
-    background: #ffffff;
+    background: transparent;
     border-radius: 50%;
     margin: 0 auto 1rem;
     display: flex;
@@ -1172,4 +1169,275 @@ select:focus {
     font-weight: 700;
     margin-bottom: 1.5rem;
     text-transform: uppercase;
+}
+
+/* Team Schedule Table (ESPN Style) */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.team-schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    font-family: var(--font-body);
+}
+
+.team-schedule-table th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background: #334155;
+    color: var(--text-muted);
+    font-family: var(--font-head);
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 0.8rem;
+    border-bottom: 2px solid var(--bg-dark);
+}
+
+.team-schedule-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #334155;
+    color: var(--text-main);
+}
+
+.team-schedule-table tr:last-child td {
+    border-bottom: none;
+}
+
+.team-schedule-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.result-win {
+    color: #4ade80;
+    /* Green */
+    font-weight: 700;
+}
+
+.result-loss {
+    color: #ef4444;
+    /* Red */
+    font-weight: 700;
+}
+
+.result-tie {
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.opponent-flex {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.opponent-logo-small {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Valorant Stats Table */
+.val-stats-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.val-stats-table th {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    padding: 1rem;
+    text-align: center;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.val-stats-table td {
+    background: #0f172a;
+    padding: 1rem;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.val-stats-table tr:hover td {
+    background: #1e293b;
+}
+
+.val-map-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 60px;
+    background: linear-gradient(45deg, #334155, #1e293b);
+    color: white;
+    font-family: var(--font-head);
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    margin: 0 auto;
+    text-transform: uppercase;
+    font-size: 1.1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.win-rate-pill {
+    background: #1e293b;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 100px;
+    border: 1px solid #334155;
+}
+
+.wr-percent {
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.wr-record {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.agent-comp {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+}
+
+.agent-icon {
+    width: 30px;
+    height: 30px;
+    background: #334155;
+    border-radius: 4px;
+    border: 1px solid #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: white;
+    overflow: hidden;
+}
+
+/* Player Stats Table Extensions */
+.player-stat-cell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.p-stat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    overflow: hidden;
+}
+
+.p-stat-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.p-stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.p-stat-name {
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.p-stat-role {
+    color: var(--accent-red);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.team-tabs {
+    position: relative;
+    z-index: 1000 !important;
+    pointer-events: auto !important;
+}
+
+.team-tab {
+    z-index: 1001 !important;
+    pointer-events: auto !important;
+    position: relative;
+}
+
+/* Matchup Page Banner Fixes (Enhanced Alignment) */
+.matchup-banner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 4rem;
+    padding: 3rem 0;
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.2));
+}
+
+.banner-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 300px;
+}
+
+.banner-logo {
+    width: 180px;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+}
+
+.banner-logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.banner-team h1 {
+    font-family: var(--font-logo);
+    font-size: 2.5rem;
+    text-transform: uppercase;
+    line-height: 1.1;
+    margin: 0;
+    color: white;
+    min-height: 2.75rem;
+    /* Reserve space for 1 line, or allow grow */
+}
+
+.banner-vs {
+    font-family: var(--font-head);
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--accent-red);
+    font-style: italic;
+    /* Vertically align with logos (180px height) */
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

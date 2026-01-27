@@ -9,6 +9,7 @@
         href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;700&family=Teko:wght@400;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
         .admin-login-overlay {
             position: fixed;
@@ -114,7 +115,7 @@
 
     <div class="admin-dashboard container" id="dashboard">
         <header style="display:flex; justify-content:space-between; margin-bottom:2rem;">
-            <h1>Admin Control Panel</h1>
+            <h1>Admin Control Panel <span style="font-size:0.5em; opacity:0.5">v1.1</span></h1>
             <div>
                 <button class="btn btn-outline" onclick="window.location.href='index.html'">View Site</button>
                 <button class="btn btn-primary" onclick="resetAppData()">Reset Data</button>
@@ -127,6 +128,7 @@
                 <div class="admin-nav-item" onclick="switchTab('schedule')">Schedule Editor</div>
                 <div class="admin-nav-item" onclick="switchTab('roster')">Roster Editor</div>
                 <div class="admin-nav-item" onclick="switchTab('reports')">Match Reports</div>
+                <div class="admin-nav-item" onclick="switchTab('settings')">Global Settings</div>
             </aside>
 
             <main class="admin-content">
@@ -209,6 +211,30 @@
                     </div>
                     <div id="match-reports-list" style="display:flex; flex-direction:column; gap:1rem;"></div>
                 </div>
+
+                <!-- Global Settings -->
+                <div id="view-settings" style="display:none;">
+                    <h2>Global Site Settings</h2>
+                    <div class="editor-card">
+                        <div class="form-group">
+                            <label>Current Active Week</label>
+                            <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.5rem;">Controls the
+                                landing page schedule and filtered ticker scores.</p>
+                            <select id="setting-current-week" class="form-control" style="max-width:200px;">
+                                <option value="1">Week 1</option>
+                                <option value="2">Week 2</option>
+                                <option value="3">Week 3</option>
+                                <option value="4">Week 4</option>
+                                <option value="5">Week 5</option>
+                                <option value="6">Week 6</option>
+                                <option value="7">Week 7</option>
+                                <option value="8">Week 8</option>
+                                <option value="9">Week 9</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
@@ -239,6 +265,25 @@
             loadScheduleEditor();
             initRosterDropdown();
             loadReports();
+            loadSettings();
+        }
+
+        function loadSettings() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('pec_settings') || '{}');
+                document.getElementById('setting-current-week').value = settings.currentWeek || '1';
+            } catch (e) {
+                console.warn("Error loading settings", e);
+            }
+        }
+
+        function saveSettings() {
+            const currentWeek = document.getElementById('setting-current-week').value;
+            const settings = {
+                currentWeek: currentWeek
+            };
+            localStorage.setItem('pec_settings', JSON.stringify(settings));
+            alert('Settings Saved! Current Week is now Week ' + currentWeek);
         }
 
         // ... (Scores Logic remains) ...
@@ -247,11 +292,36 @@
 
         // ... (Roster Logic remains) ...
 
-        function saveRoster() {
+        async function saveRoster() {
+            console.log("DEBUG: saveRoster v1.2 FIXED executed");
             const team = document.getElementById('admin-roster-team').value;
+            // Ensure currentRosterMembers is defined; if not, try to recover or error gracefully
+            if (typeof currentRosterMembers === 'undefined') {
+                console.error("currentRosterMembers is undefined. Roster editor might not be loaded.");
+                alert("Error: Roster data not loaded properly.");
+                return;
+            }
             rosterData[team] = currentRosterMembers;
-            saveAppData();
-            alert(`${team} Roster Saved!`);
+
+            // API Save or Fallback
+            try {
+                const res = await fetch('/.netlify/functions/save-roster', {
+                    method: 'POST',
+                    body: JSON.stringify(rosterData),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!res.ok) {
+                    // Throw distinct error to trigger fallback
+                    throw new Error("API_UNAVAILABLE: " + res.status);
+                }
+
+                alert(`${team} Roster Saved!`);
+            } catch (e) {
+                console.warn("API Unavailable or Error, saving to Local Storage (Dev Mode). Details:", e);
+                localStorage.setItem('pec_rosters', JSON.stringify(rosterData));
+                alert(`${team} Roster Saved (Local Dev Mode)!`);
+            }
         }
 
         // --- MATCH REPORT LOGIC ---
@@ -279,32 +349,69 @@
                 const report = matchReports[reportId] || {};
                 const scoreA = report.scoreA || '';
                 const scoreB = report.scoreB || '';
-                const ballchasingUrls = report.ballchasingUrls || [];
+                const ballchasingGroupUrl = report.ballchasingGroupUrl || '';
 
-                // Conditional HTML for Ballchasing Link
-                let rlField = '';
+                // --- Rocket League Field ---
+                let specializedField = '';
                 if (m.game === 'Rocket League') {
-                    rlField = `
-                    <div style="margin-bottom:1rem;">
-                        <label style="font-size:0.8rem; color:#94a3b8; display:block; margin-bottom:0.2rem;">Ballchasing Replay Links (3 Required)</label>
-                        <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                            ${[0, 1, 2, 3, 4].map(i => {
-                        const url = ballchasingUrls[i] || '';
-                        return `
-                                <div style="display:flex; flex-direction:column; gap:0.2rem; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px;">
-                                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                                        <input type="text" class="form-control" id="rep-rl-link-${reportId}-${i}" 
-                                            value="${url}" 
-                                            placeholder="Paste Ballchasing URL here" 
-                                            style="flex:1; font-size:0.85rem;">
+                    specializedField = `
+                    <div style="margin-bottom:1rem; border:1px solid #334155; padding:1rem; border-radius:4px;">
+                        <label style="font-size:0.9rem; color:#4ade80; display:block; margin-bottom:0.5rem; font-weight:bold;">Rocket League Automation</label>
+                        <div style="display:flex; flex-direction:column; gap:0.2rem; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px;">
+                            <div style="display:flex; gap:0.5rem; align-items:center;">
+                                <input type="text" class="form-control" id="rep-rl-group-${reportId}" 
+                                    value="${ballchasingGroupUrl}" 
+                                    placeholder="Paste Ballchasing Group URL" 
+                                    style="flex:1; font-size:0.85rem;">
+                            </div>
+                            <div style="font-size:0.7rem; color:#64748b; margin-left:2px;">
+                                ${ballchasingGroupUrl ? `<a href="${ballchasingGroupUrl}" target="_blank" style="color:#4ade80;">View Group</a>` : 'Paste group link to auto-fetch aggregate stats'}
+                            </div>
+                        </div>
+                         <button class="btn btn-outline" style="margin-top:1rem; width:100%" onclick="fetchBallchasingStats('${reportId}', '${m.teamA}', '${m.teamB}')">Fetch Group Stats</button>
+                    </div>`;
+                }
+
+                // --- Valorant Field ---
+                if (m.game === 'Valorant') {
+                    specializedField = `
+                    <div style="margin-bottom:1rem; border:1px solid #334155; padding:1rem; border-radius:4px;">
+                        <label style="font-size:0.9rem; color:#f43f5e; display:block; margin-bottom:0.5rem; font-weight:bold;">Valorant Match Reporting</label>
+                        
+                        <div id="val-games-container-${reportId}">
+                             <!-- Placeholder for Game 1, 2, 3 inputs could go here, or we treat it as 1-3 fixed -->
+                             <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem;">Paste a screenshot of the scoreboard (Win+Shift+S, then Ctrl+V) into the box below for each game.</p>
+                             
+                             ${[1, 2, 3].map(i => `
+                                <div class="val-game-row" style="background:rgba(0,0,0,0.2); padding:0.5rem; margin-bottom:0.5rem; border-radius:4px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                                        <span style="font-weight:bold; font-size:0.85rem;">Game ${i}</span>
+                                        <select class="form-control" style="width:120px; font-size:0.8rem;" id="val-winner-${reportId}-${i}">
+                                            <option value="">Select Winner</option>
+                                            <option value="${m.teamA}" ${(report.games && report.games[i] && report.games[i].winner === m.teamA) ? 'selected' : ''}>${m.teamA}</option>
+                                            <option value="${m.teamB}" ${(report.games && report.games[i] && report.games[i].winner === m.teamB) ? 'selected' : ''}>${m.teamB}</option>
+                                        </select>
                                     </div>
-                                    <div style="font-size:0.7rem; color:#64748b; margin-left:2px;">
-                                        ${url ? `<a href="${url}" target="_blank" style="color:#4ade80;">View Saved Replay</a>` : 'Paste link to auto-fetch stats'}
+                                    <div class="paste-zone" id="paste-zone-${reportId}-${i}" 
+                                         contenteditable="true" 
+                                         style="border:1px dashed #475569; padding:1rem; min-height:40px; font-size:0.8rem; color:#94a3b8; text-align:center; cursor:text;"
+                                         onpaste="handlePaste(event, '${reportId}', ${i})"
+                                    >Click & Paste Screenshot Here</div>
+                                    <div id="paste-preview-${reportId}-${i}" style="margin-top:0.5rem; display:none;">
+                                        <img style="max-width:100%; border-radius:4px; max-height:100px; object-fit:cover;">
+                                        <button class="btn btn-sm btn-outline" style="width:100%; margin-top:0.2rem;" onclick="processValorantImage('${reportId}', ${i})">Auto-Fill Stats</button>
+                                    </div>
+                                    
+                                    <!-- Game Stats (Per Game) -->
+                                    <div style="margin-top:1rem; border-top:1px dashed #334155; padding-top:0.5rem;">
+                                        ${renderPlayerStatsInputs(m.teamA, m.game, reportId, (report.games && report.games[i] && report.games[i].stats) || {}, i)}
+                                        ${renderPlayerStatsInputs(m.teamB, m.game, reportId, (report.games && report.games[i] && report.games[i].stats) || {}, i)}
                                     </div>
                                 </div>
-                            `}).join('')}
+                             `).join('')}
                         </div>
-                         <button class="btn btn-outline" style="margin-top:1rem; width:100%" onclick="fetchBallchasingStats('${reportId}', '${m.teamA}', '${m.teamB}')" title="Fetch Stats from Ballchasing">Fetch Stats</button>
+                        
+                        <button class="btn btn-outline" style="width:100%; margin-top:0.5rem;" onclick="calcValorantSeries('${reportId}')">Update Series Score</button>
                     </div>`;
                 }
 
@@ -322,9 +429,9 @@
 
                         <div id="report-details-${reportId}" style="display:none; margin-top:1rem; border-top:1px solid #334155; padding-top:1rem;">
                             
-                            ${rlField}
+                            ${specializedField}
 
-                            <h4 style="color:white; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Match Score</h4>
+                            <h4 style="color:white; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Match Score (Series)</h4>
                             <div style="display:flex; align-items:center; justify-content:center; gap:2rem; margin-bottom:1.5rem;">
                                 <div style="flex:1; text-align:center;">
                                     <label>${m.teamA}</label>
@@ -337,96 +444,144 @@
                                 </div>
                             </div>
 
-                            <h4 style="color:white; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Player Stats</h4>
+                            ${m.game !== 'Valorant' ? `
+                            <h4 style="color:white; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Aggregate Player Stats</h4>
+                            
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
                                 ${renderPlayerStatsInputs(m.teamA, m.game, reportId, report.stats || {})}
                                 ${renderPlayerStatsInputs(m.teamB, m.game, reportId, report.stats || {})}
                             </div>
+                            ` : ''}
 
                             <button class="btn btn-primary" style="width:100%; margin-top:1.5rem;" onclick="saveReport('${reportId}', '${week}')">Save Report</button>
                         </div>
                     </div>
                 `}).join('');
+
+            // Restore Images from DB (Async)
+            if (window.getImage) {
+                matches.forEach(m => {
+                    if (m.game === 'Valorant') {
+                        const reportId = `${week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '');
+                        [1, 2, 3].forEach(async i => {
+                            const blob = await getImage(`val-shot-${reportId}-${i}`);
+                            if (blob) {
+                                const img = document.querySelector(`#paste-preview-${reportId}-${i} img`);
+                                const zone = document.getElementById(`paste-zone-${reportId}-${i}`);
+                                const preview = document.getElementById(`paste-preview-${reportId}-${i}`);
+                                if (img && zone && preview) {
+                                    img.src = blob;
+                                    img.dataset.blob = blob;
+                                    zone.style.display = 'none';
+                                    preview.style.display = 'block';
+                                }
+                            }
+                        });
+                    }
+                });
+            }
         }
+
 
         // --- BALLCHASING API LOGIC ---
         const BALLCHASING_API_KEY = 'J1UM5OTMDPJsrKHtqWRLjyinwHeEJh6ilSdBRnnG';
 
         async function fetchBallchasingStats(reportId, teamA, teamB) {
-            const fetchBtn = document.querySelector(`#report-details-${reportId} button.btn-outline`);
+            const fetchBtn = document.querySelector(`#report - details - ${reportId} button.btn - outline`);
             const originalText = fetchBtn.textContent;
-            fetchBtn.textContent = 'Processing...';
+            fetchBtn.textContent = 'Processing Group...';
             fetchBtn.disabled = true;
 
             try {
-                const replayIds = [];
+                // 1. Get Group URL
+                const groupInput = document.getElementById(`rep - rl - group - ${reportId} `);
+                const groupUrl = groupInput ? groupInput.value.trim() : '';
 
-                // 1. Gather URLs
-                for (let i = 0; i < 5; i++) {
-                    const urlInput = document.getElementById(`rep-rl-link-${reportId}-${i}`);
-
-                    if (urlInput && urlInput.value.trim() !== '') {
-                        const match = urlInput.value.trim().match(/\/replay\/([a-zA-Z0-9-]+)/);
-                        if (match) replayIds.push(match[1]);
-                    }
-                }
-
-                if (replayIds.length === 0) {
-                    alert('No stats fetched. Please paste valid ballchasing.com URLs.');
+                if (!groupUrl) {
+                    alert('Please paste a valid Ballchasing Group URL.');
                     return;
                 }
 
-                // 2. Fetch Stats
-                fetchBtn.textContent = 'Fetching Stats...';
+                // Extract Group ID
+                // Supports formats: https://ballchasing.com/group/xxxxx (with or without extra path/query)
+                const match = groupUrl.match(/\/group\/([a-zA-Z0-9-]+)/);
+                if (!match) {
+                    alert('Invalid Group URL format. Expected .../group/ID...');
+                    return;
+                }
+                const groupId = match[1];
 
+                // 2. Fetch Group Stats
+                fetchBtn.textContent = 'Fetching Data...';
+
+                // PROXY CHANGE: Use local/Netlify Function proxy to avoid CORS
+                const targetUrl = `https://ballchasing.com/api/groups/${groupId}`;
+                const response = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(targetUrl)}`);
+
+                if (!response.ok) throw new Error(`Fetch Error ${response.status}: ${response.statusText}`);
+                const data = await response.json();
+
+                // Fetch Replays via Proxy (needed for match history and accurate scores)
+                const replaysTargetUrl = `https://ballchasing.com/api/replays?group=${groupId}`;
+                const replaysQuery = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(replaysTargetUrl)}`);
+                let replaysData = { list: [] };
+                if (replaysQuery.ok) {
+                    replaysData = await replaysQuery.json();
+                }
+
+                // 3. Process Player Stats (Aggregated)
                 const statsMap = {};
+                const matchHistory = replaysData.list || []; // Store full history for granular display
+
+                if (data.players) {
+                    data.players.forEach(p => {
+                        // Create map by name
+                        if (!statsMap[p.name]) statsMap[p.name] = { k: 0, d: 0, a: 0, s: 0, sh: 0 };
+                        // Cumulative stats in group response
+                        if (p.cumulative && p.cumulative.core) {
+                            statsMap[p.name].k = p.cumulative.core.goals;
+                            statsMap[p.name].d = p.cumulative.core.saves;
+                            statsMap[p.name].a = p.cumulative.core.assists;
+                            statsMap[p.name].s = p.cumulative.core.score;
+                            statsMap[p.name].sh = p.cumulative.core.shots;
+                        }
+                    });
+                }
+
+                // 4. Calculate Series Score (Wins)
                 let winsA = 0;
                 let winsB = 0;
 
-                for (const replayId of replayIds) {
-                    const response = await fetch(`https://ballchasing.com/api/replays/${replayId}`, {
-                        headers: { 'Authorization': BALLCHASING_API_KEY }
+                // Use the already fetched replaysData
+                if (replaysData.list) {
+                    replaysData.list.forEach(replay => {
+                        // Fix: Access .stats property
+                        const blueGoals = replay.blue?.stats?.core?.goals || 0;
+                        const orangeGoals = replay.orange?.stats?.core?.goals || 0;
+                        const rosterA = rosterData[teamA] || [];
+
+                        // Check which team is Blue
+                        const isBlueA = replay.blue.players.some(bp => rosterA.some(ra => ra.name.toLowerCase() === bp.name.toLowerCase()));
+
+                        if (isBlueA) {
+                            if (blueGoals > orangeGoals) winsA++;
+                            else if (orangeGoals > blueGoals) winsB++;
+                        } else {
+                            if (orangeGoals > blueGoals) winsA++;
+                            else if (blueGoals > orangeGoals) winsB++;
+                        }
                     });
 
-                    if (!response.ok) throw new Error(`Fetch Error ${response.status}: ${response.statusText}`);
-                    const data = await response.json();
-
-                    // Process Data
-                    const processSide = (side) => {
-                        side.players.forEach(p => {
-                            if (!statsMap[p.name]) statsMap[p.name] = { k: 0, d: 0, a: 0 };
-                            statsMap[p.name].k += p.stats.core.goals;
-                            statsMap[p.name].d += p.stats.core.saves;
-                            statsMap[p.name].a += p.stats.core.assists;
-                        });
-                    };
-
-                    processSide(data.blue);
-                    processSide(data.orange);
-
-                    // Winner Calculation
-                    const blueGoals = data.blue.stats.core.goals;
-                    const orangeGoals = data.orange.stats.core.goals;
-                    const rosterA = rosterData[teamA] || [];
-                    const isBlueA = data.blue.players.some(bp => rosterA.some(ra => ra.name.toLowerCase() === bp.name.toLowerCase()));
-
-                    if (isBlueA) {
-                        if (blueGoals > orangeGoals) winsA++;
-                        else winsB++;
-                    } else {
-                        if (orangeGoals > blueGoals) winsA++;
-                        else winsB++;
-                    }
+                    // Update Score Inputs
+                    document.getElementById(`rep-scoreA-${reportId}`).value = winsA;
+                    document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
                 }
 
-                // 3. Update DOM
-                document.getElementById(`rep-scoreA-${reportId}`).value = winsA;
-                document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
 
+                // Update DOM (Player Stats)
                 Object.keys(statsMap).forEach(playerName => {
                     let row = document.querySelector(`#report-details-${reportId} .stat-row-input[data-player="${playerName}"]`);
                     if (!row) {
-                        // Case insensitive search
                         const allRows = document.querySelectorAll(`#report-details-${reportId} .stat-row-input`);
                         for (const r of allRows) {
                             if (r.dataset.player.toLowerCase() === playerName.toLowerCase()) {
@@ -439,10 +594,19 @@
                         row.querySelector('[data-stat="k"]').value = statsMap[playerName].k;
                         row.querySelector('[data-stat="d"]').value = statsMap[playerName].d;
                         row.querySelector('[data-stat="a"]').value = statsMap[playerName].a;
+                        row.querySelector('[data-stat="s"]').value = statsMap[playerName].s;
+                        row.querySelector('[data-stat="sh"]').value = statsMap[playerName].sh;
                     }
                 });
 
-                alert('Stats Populated! Please click "Save Report" to persist changes.');
+                // Store history temporarily in DOM or global map? 
+                // Let's store in a hidden input or dataset to grab later during Save?
+                // Or just attach to the global matchReports temporarily?
+                // Best to attach to DOM or use a global stash.
+                if (!window.tempMatchHistory) window.tempMatchHistory = {};
+                window.tempMatchHistory[reportId] = matchHistory;
+
+                alert('Group Stats & Score Populated! matches found: ' + (winsA + winsB));
 
             } catch (err) {
                 console.error(err);
@@ -454,24 +618,78 @@
         }
 
 
-        function renderPlayerStatsInputs(team, game, reportId, stats) {
+        function renderPlayerStatsInputs(team, game, reportId, stats, gameIdx = null) {
             // Get roster filtered by game
             const roster = (rosterData[team] || []).filter(p => p.game === game);
 
             if (roster.length === 0) return `<div class="editor-card" style="background:rgba(0,0,0,0.2)"><p style="text-align:center">No Roster for ${team} (${game})</p></div>`;
 
+            if (game === 'Valorant') {
+                // Datalist for Agents (only need to define once, but here is safe)
+                const agentList = `
+                 <datalist id="valorant-agents">
+                    <option value="Jett"><option value="Raze"><option value="Reyna"><option value="Phoenix"><option value="Neon"><option value="Yoru"><option value="Iso">
+                    <option value="Sova"><option value="Fade"><option value="Skye"><option value="Gekko"><option value="Breach"><option value="KAY/O">
+                    <option value="Omen"><option value="Astra"><option value="Brimstone"><option value="Viper"><option value="Harbor"><option value="Clove">
+                    <option value="Sage"><option value="Cypher"><option value="Killjoy"><option value="Chamber"><option value="Deadlock"><option value="Vyse">
+                 </datalist>`;
+
+                return `
+                    ${agentList}
+                    <div class="editor-card" style="background:rgba(0,0,0,0.2); border:none; padding:1rem;">
+                        <h5 style="margin-top:0; margin-bottom:0.5rem; text-align:left; border-bottom:1px solid #334155; padding-bottom:0.5rem;">${team}</h5>
+                        
+                        <!-- Header -->
+                        <div style="display:grid; grid-template-columns: 150px 100px repeat(8, 1fr); gap:0.5rem; margin-bottom:0.5rem; font-size:0.75rem; color:#94a3b8; text-align:center;">
+                            <span style="text-align:left;">Player</span>
+                            <span>Agent</span>
+                            <span title="Combat Score">ACS</span>
+                            <span title="Kills">K</span>
+                            <span title="Deaths">D</span>
+                            <span title="Assists">A</span>
+                            <span title="Econ Rating">Econ</span>
+                            <span title="First Bloods">FB</span>
+                            <span title="Plants">Pl</span>
+                            <span title="Defuses">Df</span>
+                        </div>
+
+                        ${roster.map(p => {
+                    const s = stats[p.name] || {};
+                    // Map existing 's' (Score) to ACS if present from old save, or use new 'acs'
+                    const acs = s.acs || s.s || 0;
+                    return `
+                            <div class="stat-row-input" data-game="${gameIdx || 'total'}" data-player="${p.name}" style="display:grid; grid-template-columns: 150px 100px repeat(8, 1fr); gap:0.5rem; align-items:center; margin-bottom:0.5rem; font-size:0.9rem;">
+                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left;" title="${p.name}">${p.name}</span>
+                                <input data-stat="agent" list="valorant-agents" class="form-control" style="padding:0.2em; text-align:left;" placeholder="Agent" value="${s.agent || ''}">
+                                <input data-stat="acs" class="form-control" style="padding:0.2em; text-align:center;" value="${acs}">
+                                <input data-stat="k" class="form-control" style="padding:0.2em; text-align:center;" value="${s.k || 0}">
+                                <input data-stat="d" class="form-control" style="padding:0.2em; text-align:center;" value="${s.d || 0}">
+                                <input data-stat="a" class="form-control" style="padding:0.2em; text-align:center;" value="${s.a || 0}">
+                                <input data-stat="econ" class="form-control" style="padding:0.2em; text-align:center;" value="${s.econ || 0}">
+                                <input data-stat="fb" class="form-control" style="padding:0.2em; text-align:center;" value="${s.fb || 0}">
+                                <input data-stat="pl" class="form-control" style="padding:0.2em; text-align:center;" value="${s.pl || 0}">
+                                <input data-stat="df" class="form-control" style="padding:0.2em; text-align:center;" value="${s.df || 0}">
+                            </div>
+                        `}).join('')}
+                    </div>
+                `;
+            }
+
+            // Default (Rocket League / OW2 / Generic)
             return `
                 <div class="editor-card" style="background:rgba(0,0,0,0.2); border:none; padding:1rem;">
                     <h5 style="margin-top:0; text-align:center;">${team}</h5>
                     ${roster.map(p => {
-                const currentStats = stats[p.name] || { k: 0, d: 0, a: 0 };
+                const currentStats = stats[p.name] || { k: 0, d: 0, a: 0, s: 0, sh: 0 };
                 return `
                         <div class="stat-row-input" data-player="${p.name}" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; font-size:0.9rem;">
                             <span style="width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</span>
                             <div style="display:flex; gap:0.2rem;">
-                                <input data-stat="k" placeholder="K" title="Kills" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${currentStats.k || 0}">
-                                <input data-stat="d" placeholder="D" title="Deaths" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${currentStats.d || 0}">
-                                <input data-stat="a" placeholder="A" title="Assists" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${currentStats.a || 0}">
+                                <input data-stat="s" placeholder="Pts" title="Score" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${currentStats.s || 0}">
+                                <input data-stat="k" placeholder="G" title="Goals" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${currentStats.k || 0}">
+                                <input data-stat="sh" placeholder="S" title="Shots" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${currentStats.sh || 0}">
+                                <input data-stat="a" placeholder="A" title="Assists" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${currentStats.a || 0}">
+                                <input data-stat="d" placeholder="Sv" title="Saves" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${currentStats.d || 0}">
                             </div>
                         </div>
                     `}).join('')}
@@ -484,33 +702,306 @@
             el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
+        // --- VALORANT LOGIC ---
+        window.handlePaste = function (e, reportId, gameIdx) {
+            e.preventDefault();
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.includes('image')) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const img = document.querySelector(`#paste-preview-${reportId}-${gameIdx} img`);
+                        img.src = event.target.result;
+                        document.getElementById(`paste-zone-${reportId}-${gameIdx}`).style.display = 'none';
+                        document.getElementById(`paste-preview-${reportId}-${gameIdx}`).style.display = 'block';
+
+                        // Store blob URL for processing
+                        img.dataset.blob = event.target.result;
+
+                        // Persist to IndexedDB
+                        if (window.storeImage) {
+                            storeImage(`val-shot-${reportId}-${gameIdx}`, event.target.result);
+                        }
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            }
+        };
+
+        window.processValorantImage = async function (reportId, gameIdx) {
+            const img = document.querySelector(`#paste-preview-${reportId}-${gameIdx} img`);
+            if (!img.src) return alert("No image found!");
+
+            const btn = document.querySelector(`#paste-preview-${reportId}-${gameIdx} button`);
+            const originalText = btn.textContent;
+            btn.textContent = "Analyzing (this may take a moment)...";
+            btn.disabled = true;
+
+            try {
+                // Tesseract
+                const { data: { text } } = await Tesseract.recognize(img.src, 'eng', {
+                    logger: m => console.log(m)
+                });
+                console.log("OCR Text:", text);
+
+                // Parsing Logic
+                // Get Rosters
+                const card = document.getElementById(`report-details-${reportId}`);
+                // Find visible stats rows to get player names
+                const statRows = card.querySelectorAll(`.stat-row-input[data-game="${gameIdx}"]`);
+                let updatedCount = 0;
+
+                const lines = text.split('\n');
+
+                statRows.forEach(row => {
+                    const playerName = row.dataset.player; // Exact name from roster
+                    // Fuzzy matching logic logic
+                    // 1. Try exact match in line
+                    // 2. Try simple regex (ignore case)
+
+                    const playerRegex = new RegExp(playerName.split(' ').join('.*'), 'i'); // "Player Name" -> /Player.*Name/i
+
+                    for (let line of lines) {
+                        if (playerRegex.test(line)) {
+                            console.log(`Found player ${playerName} in line: ${line}`);
+
+                            // Extract numbers
+                            // Strategy: Remove alphabetical chars (except maybe K/D/A headers if present) -> extract numbers
+                            // Valorant Row: Rank | Name | Tag | ACS | K | D | A | +/-
+                            // Usually: Name ... ACS(xxx) K(xx) D(xx) A(xx)
+
+                            // Get all number sequences
+                            const numbers = line.match(/\d+/g);
+                            if (numbers && numbers.length >= 4) {
+                                // HEURISTIC: 
+                                // ACS is usually big (100-400).
+                                // K, D, A are usually smaller (<50).
+                                // Sometimes Rank is a number.
+                                // Let's try to map from the END or specifically look for the pattern.
+                                // If we find a big number, assume it's ACS. The next 3 are K/D/A.
+
+                                // Let's try to find 3-4 numbers clustered.
+                                // Better: Find the sequence that looks like stats.
+
+                                let acs = 0, k = 0, d = 0, a = 0;
+
+                                // Heuristic 2: Valid stat line usually has ACS first.
+                                // filter numbers to relevant ones?
+                                // Let's assume the last 4 numbers are A, D, K, ACS (reverse) or +/-?
+                                // Or ACS, K, D, A.
+
+                                // Let's assume standard Scoreboard: ACS  K  D  A
+                                // Finding index of ACS (usually > 50, < 500).
+
+                                const potentialStats = numbers.map(n => parseInt(n));
+
+                                // Find 'ACS' candidate (largest number usually, or first > 100)
+                                // Not always distinct.
+
+                                // Fallback: Take the 4 numbers that follow the name? 
+                                // But name might be separated.
+
+                                // Let's just take the last 4 valid integers if +/- is excluded?
+                                // If +/- is included (with + or -), regex digit might split.
+
+                                // Let's try: Look for the sequence [ACS, K, D, A]
+                                // If we have >= 4 numbers:
+                                // ACS is at index 0?
+                                // K, D, A follow.
+
+                                // Let's assume the format ACS K D A for now.
+                                // Issue: If parsing is messy, numbers might be noise.
+
+                                // MVP: Just update K/D/A if we find 3 logical numbers.
+                                if (potentialStats.length >= 3) {
+                                    // Mapping: If 4 numbers, assume [ACS, K, D, A]
+                                    if (potentialStats.length >= 4) {
+                                        // Try to align. 
+                                        // Check if numbers[0] is plausibly ACS (> K+D+A matches).
+                                        // Just map sequentially for now.
+                                        // Often there is 'Econ Rating' or something else?
+
+                                        // Let's grab the numbers that appear AFTER the name match index?
+                                        // Hard with regex match.
+
+                                        // SIMPLEST: Take the numbers. If > 100, likely ACS/Score. 
+                                        // If < 50, likely K/D/A.
+
+                                        // Map:
+                                        // s (Score/ACS) = First Number
+                                        // k = Second
+                                        // d = Third
+                                        // a = Fourth
+
+                                        // If we have "Tag" or "Ping" numbers, this breaks.
+                                        // Assuming Screenshot cleans up well.
+
+                                        let offset = 0;
+                                        // If first number is huge (e.g. 5000 credits), skip?
+                                        // If first number is < 100, might be K? ACS usually > 100.
+
+                                        const n1 = potentialStats[0];
+                                        const n2 = potentialStats[1];
+                                        const n3 = potentialStats[2];
+                                        const n4 = potentialStats[3];
+
+                                        // Logic: ACS K D A
+                                        const inpAcs = row.querySelector('[data-stat="acs"]');
+                                        const inpK = row.querySelector('[data-stat="k"]');
+                                        const inpD = row.querySelector('[data-stat="d"]');
+                                        const inpA = row.querySelector('[data-stat="a"]');
+
+                                        if (inpAcs) inpAcs.value = n1;
+                                        if (inpK) inpK.value = n2;
+                                        if (inpD) inpD.value = n3;
+                                        if (inpA) inpA.value = n4;
+
+                                        updatedCount++;
+                                    }
+                                }
+                            }
+                            break; // Stop checking lines for this player once found
+                        }
+                    }
+                });
+
+                if (updatedCount > 0) {
+                    alert(`Updated stats for ${updatedCount} players! (Added to existing totals)`);
+                } else {
+                    alert("Could not match any player names from the screenshot. Check image clarity.");
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert("OCR Error: " + e.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        window.calcValorantSeries = function (reportId) {
+            let winsA = 0;
+            let winsB = 0;
+            const container = document.getElementById(`val-games-container-${reportId}`);
+            if (!container) return;
+            const selects = container.querySelectorAll('select');
+
+            // Get Team Names from the first select options or DOM
+            const teamA = selects[0].options[1].value;
+            const teamB = selects[0].options[2].value;
+
+            selects.forEach(s => {
+                if (s.value === teamA) winsA++;
+                if (s.value === teamB) winsB++;
+            });
+
+            document.getElementById(`rep-scoreA-${reportId}`).value = winsA;
+            document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
+        };
+
         async function saveReport(reportId, week) {
             const scoreA = document.getElementById(`rep-scoreA-${reportId}`).value;
             const scoreB = document.getElementById(`rep-scoreB-${reportId}`).value;
 
-            // Get Ballchasing URLs
-            const ballchasingUrls = [];
-            for (let i = 0; i < 5; i++) {
-                const input = document.getElementById(`rep-rl-link-${reportId}-${i}`);
-                if (input) ballchasingUrls.push(input.value);
-            }
+            // Get Ballchasing Group URL
+            const groupInput = document.getElementById(`rep-rl-group-${reportId}`);
+            const ballchasingGroupUrl = groupInput ? groupInput.value.trim() : '';
 
             const card = document.getElementById(`report-details-${reportId}`);
             const statRows = card.querySelectorAll('.stat-row-input');
-            const stats = {};
 
+            // Data Containers
+            const stats = {};
+            const games = {}; // Per-Game { 1: { winner: '...', stats: {} } }
+
+            // 1. Capture Game Winners (Valorant)
+            for (let i = 1; i <= 3; i++) {
+                const winSel = document.getElementById(`val-winner-${reportId}-${i}`);
+                if (winSel) {
+                    if (!games[i]) games[i] = { stats: {} };
+                    games[i].winner = winSel.value;
+                }
+            }
+
+            // 2. Process Rows
             statRows.forEach(row => {
                 const player = row.dataset.player;
-                const k = row.querySelector('[data-stat="k"]').value;
-                const d = row.querySelector('[data-stat="d"]').value;
-                const a = row.querySelector('[data-stat="a"]').value;
-                stats[player] = { k, d, a };
+                const gameIdx = row.dataset.game;
+
+                const inputs = row.querySelectorAll('input[data-stat]');
+                const pStats = {};
+                inputs.forEach(input => {
+                    pStats[input.dataset.stat] = input.value;
+                });
+
+                if (gameIdx && gameIdx !== 'total') {
+                    // --- PER GAME STATS (Valorant) ---
+                    if (!games[gameIdx]) games[gameIdx] = { stats: {} };
+                    if (!games[gameIdx].stats) games[gameIdx].stats = {};
+                    games[gameIdx].stats[player] = pStats;
+
+                    // Aggregate Logic
+                    if (!stats[player]) stats[player] = { k: 0, d: 0, a: 0, acs: 0, econ: 0, fb: 0, pl: 0, df: 0, maps: 0, s: 0 };
+
+                    const cur = stats[player];
+                    cur.k += parseInt(pStats.k || 0);
+                    cur.d += parseInt(pStats.d || 0);
+                    cur.a += parseInt(pStats.a || 0);
+                    cur.fb += parseInt(pStats.fb || 0);
+                    cur.pl += parseInt(pStats.pl || 0);
+                    cur.df += parseInt(pStats.df || 0);
+
+                    cur.acs += parseInt(pStats.acs || 0);
+                    cur.econ += parseInt(pStats.econ || 0);
+                    cur.maps += 1;
+
+                    if (pStats.agent) cur.agent = pStats.agent;
+                } else {
+                    stats[player] = pStats;
+                }
             });
 
-            // Reconstruct Match Object for API
-            // Find the match in scheduleData to get base details (ID, etc)
-            // reportId logic: `${m.week}-${m.game}-${m.teamA}-${m.teamB}`
+            // 3. Finalize Averages (Valorant)
+            Object.keys(stats).forEach(p => {
+                if (stats[p].maps > 0) {
+                    stats[p].acs = Math.round(stats[p].acs / stats[p].maps);
+                    stats[p].econ = Math.round(stats[p].econ / stats[p].maps);
+                    stats[p].s = stats[p].acs;
+                }
+            });
 
+            // 4. Generate Match History for Public Site (Valorant)
+            let matchHistory = (window.tempMatchHistory && window.tempMatchHistory[reportId]) ? window.tempMatchHistory[reportId] : null;
+
+            // If Valorant (games detected), generate matchHistory manually
+            if (Object.keys(games).length > 0) {
+                matchHistory = [];
+                for (let i = 1; i <= 3; i++) {
+                    if (games[i] && games[i].stats && Object.keys(games[i].stats).length > 0) {
+                        const replay = { blue: { players: [] }, orange: { players: [] } };
+                        Object.keys(games[i].stats).forEach(pName => {
+                            const pStat = games[i].stats[pName];
+                            const playerObj = {
+                                name: pName,
+                                stats: { core: { score: pStat.acs, k: pStat.k } },
+                                valorant: pStat
+                            };
+                            replay.blue.players.push(playerObj);
+                        });
+                        matchHistory.push(replay);
+                    }
+                }
+            } else if (!matchHistory) {
+                const existingRep = matchReports[reportId];
+                if (existingRep && existingRep.matchHistory) {
+                    matchHistory = existingRep.matchHistory;
+                }
+            }
+
+            // Reconstruct Match Object for API
             const weekData = scheduleData.find(w => w.week == week);
             if (!weekData) return alert("Week not found locally");
 
@@ -524,7 +1015,7 @@
 
             // Payload
             const payload = {
-                id: match.id, // Prefer ID
+                id: match.id,
                 week: match.week,
                 game: match.game,
                 teamA: match.teamA,
@@ -533,9 +1024,9 @@
                 time: match.time,
                 scoreA: parseInt(scoreA) || 0,
                 scoreB: parseInt(scoreB) || 0,
-                status: (scoreA !== '' && scoreB !== '') ? 'FINAL' : 'SCHEDULED', // Auto-finalize if scores present
+                status: (scoreA !== '' && scoreB !== '') ? 'FINAL' : 'SCHEDULED',
                 reportData: {
-                    scoreA, scoreB, ballchasingUrls, stats
+                    scoreA, scoreB, ballchasingGroupUrl, stats, games, matchHistory
                 }
             };
 
@@ -545,13 +1036,73 @@
                     body: JSON.stringify(payload),
                     headers: { 'Content-Type': 'application/json' }
                 });
-                if (!res.ok) throw new Error('Save Failed');
+                if (!res.ok) {
+                    if (res.status === 404 || res.status === 500 || res.status === 405) throw new Error("API_UNAVAILABLE");
+                    throw new Error('Save Failed');
+                }
 
                 alert('Match Report Saved!');
                 await loadAppData();
                 loadReports();
             } catch (e) {
-                alert("Error saving report: " + e.message);
+                if (e.message.includes("API_UNAVAILABLE") || e.message.includes("Failed to fetch")) {
+                    console.warn("API Unavailable, saving to Local Storage (Dev Mode)");
+
+                    // Need to update the precise match in the saved JSON structure (flat list)
+                    // 1. Get Existing Matches
+                    let allMatches = JSON.parse(localStorage.getItem('pec_matches') || '[]');
+                    // If empty, we might be in trouble if we didn't seed first. 
+                    // Assuming user workflow involves visiting non-admin pages first which seeds data? 
+                    // Or if they saved schedule first. 
+
+                    // Fallback: If nothing in LC, we essentially need to "hydrate" from current global state
+                    // This is complex. Let's assume for this specific flow that `pec_matches` exists or we use global scheduleData to find the "match content" but we need to persist it.
+
+                    if (allMatches.length === 0) {
+                        // Hydrate from global `scheduleData`
+                        let idCounter = 1;
+                        scheduleData.forEach(w => {
+                            w.matches.forEach(m => {
+                                allMatches.push({
+                                    id: m.id || idCounter++,
+                                    week: m.week,
+                                    date: w.date,
+                                    team_a: m.teamA,
+                                    team_b: m.teamB,
+                                    score_a: m.scoreA === '-' ? null : m.scoreA,
+                                    score_b: m.scoreB === '-' ? null : m.scoreB,
+                                    status: m.status,
+                                    game: m.game,
+                                    time: m.time,
+                                    report_data: matchReports[`${m.week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '')] || null
+                                });
+                            });
+                        });
+                    }
+
+                    // 2. Find and Update
+                    const matchIndex = allMatches.findIndex(m => {
+                        // Fuzzy match logic since IDs might not be stable if generated
+                        return m.week == week && m.team_a === payload.teamA && m.team_b === payload.teamB && m.game === payload.game;
+                    });
+
+                    if (matchIndex !== -1) {
+                        allMatches[matchIndex].score_a = payload.scoreA;
+                        allMatches[matchIndex].score_b = payload.scoreB;
+                        allMatches[matchIndex].status = payload.status;
+                        allMatches[matchIndex].report_data = payload.reportData;
+
+                        localStorage.setItem('pec_matches', JSON.stringify(allMatches));
+                        alert('Match Report Saved (Local Dev Mode)!');
+                        await loadAppData();
+                        loadReports();
+                    } else {
+                        alert("Error: Match record not found in storage to update.");
+                    }
+
+                } else {
+                    alert("Error saving report: " + e.message);
+                }
             }
         }
 
@@ -612,6 +1163,7 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (!res.ok) {
+                    if (res.status === 404 || res.status === 500 || res.status === 405) throw new Error("API_UNAVAILABLE");
                     const errText = await res.text();
                     throw new Error(errText || 'Save Failed');
                 }
@@ -620,7 +1172,38 @@
                 await loadAppData(); // Reload to get stable IDs
                 renderScoresEditor();
             } catch (e) {
-                alert("Error saving: " + e.message);
+                if (e.message.includes("API_UNAVAILABLE") || e.message.includes("Failed to fetch")) {
+                    // Scores are essentially matches but for the ticker often they are just "extra" data in some systems
+                    // But here they map to matches.
+                    // The logic above tries to save them as matches.
+                    // For Local Dev, we might not want to overwrite the whole schedule via Ticker?
+                    // BUT, the ticker editor here seems to just be a "quick edit matches" view.
+                    // Let's assume we update the specific matches in `pec_matches`
+
+                    // Similar logic to Report Save
+                    let allMatches = JSON.parse(localStorage.getItem('pec_matches') || '[]');
+
+                    // For each "Score" row, find and update
+                    newScores.forEach(s => {
+                        const idx = allMatches.findIndex(m => m.team_a === s.teamA && m.team_b === s.teamB && m.game === s.game);
+                        if (idx !== -1) {
+                            allMatches[idx].score_a = s.scoreA;
+                            allMatches[idx].score_b = s.scoreB;
+                            allMatches[idx].status = s.status;
+                        }
+                        // Note: If new row added via "Add Score", it won't be in allMatches. 
+                        // Implementing "Add Match" via ticker is complex for Week matching. 
+                        // For now we assume updating existing.
+                    });
+
+                    localStorage.setItem('pec_matches', JSON.stringify(allMatches));
+                    alert('Scores Saved (Local Dev Mode)!');
+                    await loadAppData();
+                    renderScoresEditor();
+
+                } else {
+                    alert("Error saving: " + e.message);
+                }
             }
         }
 
@@ -764,7 +1347,6 @@
             });
 
             // Send to API
-            // Send to API
             try {
                 const res = await fetch('/.netlify/functions/save-match', {
                     method: 'POST',
@@ -777,6 +1359,8 @@
                 });
                 if (!res.ok) {
                     const errText = await res.text();
+                    // Detect likely 404/500/405 from static server and fallback
+                    if (res.status === 404 || res.status === 500 || res.status === 405) throw new Error("API_UNAVAILABLE");
                     throw new Error(errText || 'Save Failed');
                 }
 
@@ -784,7 +1368,67 @@
                 await loadAppData();
                 loadScheduleEditor();
             } catch (e) {
-                alert("Error saving schedule: " + e.message);
+                if (e.message.includes("API_UNAVAILABLE") || e.message.includes("Failed to fetch")) {
+                    console.warn("API Unavailable, saving to Local Storage (Dev Mode)");
+
+                    // 1. Get Existing
+                    let allMatches = JSON.parse(localStorage.getItem('pec_matches') || '[]');
+
+                    // If empty (first save), we might need to seed from initial data using script.js logic if we want to preserve other weeks?
+                    // Actually, if we just saved to local storage, we might have previous data. 
+                    // But if it's the very first time, we should probably ensure we don't wipe other weeks if we started from 'initialScheduleData' in script.js but haven't persisted it to LC yet.
+                    // However, script.js loads INTO memory. We can't easily get the 'full' DB from memory unless we export it.
+                    // scheduleData is Global found in script.js. readable here.
+
+                    // Better approach: Reconstruct 'allMatches' from the current global `scheduleData` to ensure we don't lose other weeks, 
+                    // THEN apply our updates.
+
+                    // Rebuild flat list from global scheduleData
+                    let recoveredMatches = [];
+                    scheduleData.forEach(w => {
+                        w.matches.forEach(m => {
+                            // Don't include the week we are replacing
+                            if (w.week !== week) {
+                                recoveredMatches.push({
+                                    id: m.id,
+                                    week: m.week,
+                                    date: w.date,
+                                    team_a: m.teamA,
+                                    team_b: m.teamB,
+                                    score_a: m.scoreA === '-' ? null : m.scoreA,
+                                    score_b: m.scoreB === '-' ? null : m.scoreB,
+                                    status: m.status,
+                                    game: m.game,
+                                    time: m.time,
+                                    report_data: matchReports[`${m.week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '')] || null
+                                });
+                            }
+                        });
+                    });
+
+                    // Add New Matches (snake_case conversion)
+                    const newFlatMatches = newMatches.map((m, idx) => ({
+                        id: Date.now() + idx, // Generate temporary ID
+                        week: week,
+                        date: 'Feb 16', // TODO: Fetch from week data or UI? For now hardcode or lookup
+                        team_a: m.teamA,
+                        team_b: m.teamB,
+                        score_a: null,
+                        score_b: null,
+                        status: 'SCHEDULED',
+                        game: m.game,
+                        time: m.time
+                    }));
+
+                    allMatches = [...recoveredMatches, ...newFlatMatches];
+
+                    localStorage.setItem('pec_matches', JSON.stringify(allMatches));
+                    alert(`Week ${week} Schedule Saved (Local Dev Mode)!`);
+                    await loadAppData();
+                    loadScheduleEditor();
+                } else {
+                    alert("Error saving schedule: " + e.message);
+                }
             }
         }
 
@@ -844,28 +1488,61 @@
             renderRosterList();
         }
 
-        async function saveRoster() {
-            const team = document.getElementById('admin-roster-team').value;
-            // Use currentRosterMembers
 
-            try {
-                const res = await fetch('/.netlify/functions/save-roster', {
-                    method: 'POST',
-                    body: JSON.stringify({ team, players: currentRosterMembers }),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                if (!res.ok) {
-                    const errText = await res.text();
-                    throw new Error(errText || 'Save Failed');
-                }
-                alert(`${team} Roster Saved!`);
-                await loadAppData();
-            } catch (e) {
-                alert("Error saving roster: " + e.message);
+
+
+    </script>
+    <script>
+        // --- IMAGE PERSISTENCE (IndexedDB) ---
+        let db;
+        const DB_NAME = 'pec_admin_db';
+        const STORE_NAME = 'screenshots';
+
+        function initDB() {
+            if (!window.indexedDB) {
+                console.warn("IndexedDB not supported");
+                return;
             }
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = function (event) {
+                db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: "id" });
+                }
+            };
+            request.onsuccess = function (event) {
+                db = event.target.result;
+                console.log("IndexedDB Initialized");
+            };
+            request.onerror = function (event) {
+                console.error("IndexedDB error", event);
+            };
         }
 
+        function storeImage(id, blobOrUrl) {
+            if (!db) return;
+            const transaction = db.transaction([STORE_NAME], "readwrite");
+            const store = transaction.objectStore(STORE_NAME);
+            store.put({ id: id, image: blobOrUrl, date: new Date() });
+        }
 
+        async function getImage(id) {
+            if (!db) return null;
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readonly");
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(id);
+                request.onsuccess = function (event) {
+                    resolve(request.result ? request.result.image : null);
+                };
+                request.onerror = function (event) {
+                    resolve(null);
+                };
+            });
+        }
+
+        // Initialize DB
+        initDB();
     </script>
 </body>
 
