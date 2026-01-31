@@ -11,108 +11,154 @@
     <link rel="stylesheet" href="styles.css">
     <style>
         .player-hero {
-            background: linear-gradient(to bottom, rgba(15, 23, 42, 0.9), var(--bg-dark)), url('https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80');
-            background-size: cover;
-            background-position: center;
-            padding: 6rem 0 4rem;
-            color: white;
-            border-bottom: 1px solid #334155;
             position: relative;
+            background: var(--bg-dark);
+            height: 220px;
+            /* Much shorter */
+            margin-top: -1px;
+            overflow: visible;
+            /* Allow avatar overlap */
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            margin-bottom: 4rem;
+            /* Space for overlapped avatar */
         }
 
-        .player-hero::before {
-            content: '';
+        .player-hero-bg {
             position: absolute;
             top: 0;
-            left: 0;
-            width: 100%;
+            right: 0;
+            width: 60%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.8);
-            z-index: 0;
+            background-size: cover;
+            background-position: center right;
+            /* Force right alignment */
+            z-index: 1;
+            /* Sharp fade */
+            mask-image: linear-gradient(to right, transparent 0%, black 100%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 80%);
+            opacity: 0.8;
         }
 
-        .player-hero-content {
+        .hero-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            height: 120%;
+            /* Larger relative to short banner */
+            opacity: 0.05;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .container.player-hero-content {
             position: relative;
-            z-index: 1;
+            z-index: 10;
             display: flex;
-            align-items: flex-end;
+            align-items: center;
+            height: 100%;
             gap: 2rem;
+            padding-left: 0;
         }
 
         .player-avatar-large {
-            width: 150px;
-            height: 150px;
-            background: var(--bg-card);
-            border: 2px solid var(--accent-red);
+            width: 200px;
+            height: 200px;
+            background: #1e293b;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            color: var(--text-muted);
+            border: 4px solid var(--accent-red);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
+            top: 40px;
+            /* Overlap bottom */
         }
 
-        .player-info h1 {
-            font-size: 3.5rem;
-            line-height: 1;
-            margin-bottom: 0.5rem;
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-top: 1rem;
+        }
+
+        .player-name {
             font-family: 'Teko', sans-serif;
+            font-size: 5rem;
+            line-height: 0.9;
             text-transform: uppercase;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            margin-bottom: 0;
         }
 
         .player-meta {
             display: flex;
-            gap: 1.5rem;
+            align-items: center;
+            gap: 1rem;
             font-family: 'Chakra Petch', sans-serif;
+            font-size: 1.2rem;
             color: var(--text-muted);
-            font-size: 1.1rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .meta-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .stat-card {
-            background: var(--bg-card);
+            background: #1e293b;
             border: 1px solid #334155;
-            padding: 1.5rem;
-            border-radius: 8px;
+            padding: 2rem;
+            border-radius: 12px;
             text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: white;
-            font-family: 'Teko', sans-serif;
-        }
+        @media (max-width: 768px) {
+            .player-hero {
+                height: auto;
+                padding: 4rem 0;
+            }
 
-        .stat-label {
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-        }
+            .player-hero-content {
+                flex-direction: column;
+                text-align: center;
+            }
 
-        .recent-matches {
-            margin-top: 3rem;
-        }
+            .player-avatar-large {
+                width: 180px;
+                height: 180px;
+            }
 
-        .match-history-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            padding: 1rem;
-            border-bottom: 1px solid #334155;
-            align-items: center;
-            color: white;
-            text-decoration: none;
-            transition: background 0.2s;
-        }
+            .player-name {
+                font-size: 4rem;
+            }
 
-        .match-history-row:hover {
-            background: rgba(255, 255, 255, 0.05);
+            .player-meta {
+                justify-content: center;
+                font-size: 1.1rem;
+            }
+
+            .player-hero-bg {
+                width: 100%;
+                opacity: 0.3;
+                mask-image: none;
+                -webkit-mask-image: none;
+                top: 0;
+                left: 0;
+            }
         }
     </style>
 </head>
 
-<body class="player-profile-page"> <!-- Added class hook for JS -->
+<body class="player-profile-page">
     <!-- Main Navigation -->
     <header class="main-header">
         <div class="container header-inner">
@@ -132,66 +178,75 @@
         </div>
     </header>
 
-    <div id="player-not-found" style="display:none; padding: 4rem; text-align:center; color:white;">
+    <div id="player-not-found" style="display:none; padding: 10rem 0; text-align:center;">
         <h1>Player Not Found</h1>
-        <p>The requested player does not exist.</p>
+        <p style="color:var(--text-muted); margin-bottom:2rem;">The requested player profile could not be loaded.</p>
         <a href="teams.html" class="btn btn-primary">Back to Teams</a>
     </div>
 
-    <div id="player-content">
+    <!-- Hidden by default, shown by JS -->
+    <div id="player-content" style="display:none;">
         <header class="player-hero">
+            <div id="hero-bg" class="player-hero-bg"></div>
+            <img id="hero-watermark" class="hero-watermark" src="" alt="Watermark">
+
             <div class="container player-hero-content">
                 <div class="player-avatar-large">
-                    <img id="player-img" src="https://ui-avatars.com/api/?name=P&background=0D8ABC&color=fff"
-                        style="width:100%; height:100%; object-fit:cover;">
+                    <img id="player-img" src="" style="width:100%; height:100%; object-fit:cover;">
                 </div>
                 <div class="player-info">
-                    <h1 id="player-name">Player Name</h1>
+                    <div style="font-family:'Chakra Petch'; color:var(--accent-red); font-weight:700; font-size:1.2rem; letter-spacing:2px; margin-bottom:0.5rem; text-transform:uppercase;"
+                        id="player-role-label">ROLE</div>
+                    <h1 class="player-name" id="player-name">PLAYER NAME</h1>
                     <div class="player-meta">
-                        <span id="player-team">Team Name</span> • <span id="player-role">Role</span> • <span
-                            id="player-game">Game</span>
+                        <div class="meta-pill">
+                            <img id="meta-team-logo" src="" style="width:30px; height:30px; object-fit:contain;">
+                            <span id="player-team" style="color:white; font-weight:700;">Team</span>
+                        </div>
+                        <span>•</span>
+                        <span id="player-game-display">Game</span>
                     </div>
                 </div>
             </div>
         </header>
 
         <div class="container" style="padding: 3rem 1rem;">
-            <h2 class="section-title">Career Statistics</h2>
-            <div class="grid career-stats-grid"
-                style="grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom:3rem;">
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-total-kills">-</div>
-                    <div class="stat-label">Total Kills</div>
+            <div class="player-content-grid"
+                style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem; align-items:start;">
+                <!-- Stats Column -->
+                <div class="stats-section">
+                    <h2 class="section-title">Career Statistics</h2>
+                    <div class="grid career-stats-grid"
+                        style="grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom:0;">
+                        <!-- JS Injected -->
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-kd-ratio">-</div>
-                    <div class="stat-label">K/D Ratio</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-total-assists">-</div>
-                    <div class="stat-label">Total Assists</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-games-played">-</div>
-                    <div class="stat-label">Games Played</div>
+
+                <!-- History Column -->
+                <div class="recent-matches">
+                    <h2 class="section-title">Match History</h2>
+                    <div class="editor-card" style="padding:0;">
+                        <div class="history-header"
+                            style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; padding:1rem; background:#1e293b; color:var(--text-muted); font-size:0.9rem; font-weight:bold; text-transform:uppercase;">
+                            <span>Opponent</span>
+                            <span>Result</span>
+                            <span>Stats</span>
+                            <span>Date</span>
+                        </div>
+                        <div id="player-match-history">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="recent-matches">
-                <h2 class="section-title">Match History</h2>
-                <div class="editor-card" style="padding:0;">
-                    <div class="history-header"
-                        style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; padding:1rem; background:#1e293b; color:var(--text-muted); font-size:0.9rem; font-weight:bold; text-transform:uppercase;">
-                        <span>Opponent</span>
-                        <span>Result</span>
-                        <span>K / D / A</span>
-                        <span>Date</span>
-                    </div>
-                    <div id="player-match-history">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-            </div>
+            <style>
+                @media (max-width: 768px) {
+                    .player-content-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                }
+            </style>
         </div>
     </div>
 

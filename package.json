@@ -4,7 +4,8 @@
     "description": "PEC Esports Website",
     "main": "script.js",
     "dependencies": {
-        "@netlify/neon": "^0.1.0",
+        "@neondatabase/serverless": "^0.10.4",
+        "pg": "^8.13.1",
         "dotenv": "^16.4.7"
     },
     "scripts": {
