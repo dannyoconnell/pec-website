@@ -47,14 +47,34 @@ export default async (req, context) => {
 
             // For now, I will try to update. If it fails due to column missing, I'll catch and ALTER.
 
-            await sql`
-                UPDATE matches 
-                SET score_a = ${payload.scoreA}, 
-                    score_b = ${payload.scoreB}, 
-                    status = ${payload.status}
-                    -- report_data column needed here
-                WHERE id = ${payload.id}
-            `;
+            // Ensure report_data column exists (Auto-migration fallback if script didn't run)
+            try {
+                await sql`
+                    UPDATE matches 
+                    SET score_a = ${payload.scoreA}, 
+                        score_b = ${payload.scoreB}, 
+                        status = ${payload.status || 'COMPLETED'},
+                        report_data = ${payload.reportData}
+                    WHERE id = ${payload.id}
+                `;
+            } catch (err) {
+                // If error is column missing, try adding it and retry
+                if (err.message.includes('column "report_data" of relation "matches" does not exist')) {
+                    console.log("Migration: Adding report_data column...");
+                    await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS report_data JSONB`;
+                    // Retry Update
+                    await sql`
+                        UPDATE matches 
+                        SET score_a = ${payload.scoreA}, 
+                            score_b = ${payload.scoreB}, 
+                            status = ${payload.status || 'COMPLETED'},
+                            report_data = ${payload.reportData}
+                        WHERE id = ${payload.id}
+                    `;
+                } else {
+                    throw err;
+                }
+            }
 
             // Wait, I need a place to store 'reportData'.
             // The initial schema was:

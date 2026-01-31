@@ -16,9 +16,9 @@ export default async (req, context) => {
     try {
         let matches;
         if (weekParam) {
-            matches = await sql`SELECT * FROM matches WHERE week = ${weekParam} ORDER BY date, time`;
+            matches = await sql`SELECT id, week, date, time, game, team_a, team_b, score_a, score_b, status, report_data FROM matches WHERE week = ${weekParam} ORDER BY date, time`;
         } else {
-            matches = await sql`SELECT * FROM matches ORDER BY week, date, time`;
+            matches = await sql`SELECT id, week, date, time, game, team_a, team_b, score_a, score_b, status, report_data FROM matches ORDER BY week, date, time`;
         }
 
         return new Response(JSON.stringify(matches), {

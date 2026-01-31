@@ -1270,6 +1270,11 @@
                     cur.s += parseInt(pStats.s || 0);
                     cur.sh += parseInt(pStats.sh || 0);
 
+                    // OW2 / Smash Specific
+                    cur.dmg = (cur.dmg || 0) + parseInt(pStats.dmg || 0);
+                    cur.heal = (cur.heal || 0) + parseInt(pStats.heal || 0);
+                    cur.mit = (cur.mit || 0) + parseInt(pStats.mit || 0);
+
                     // Val Specific
                     cur.fb += parseInt(pStats.fb || 0);
                     cur.pl += parseInt(pStats.pl || 0);

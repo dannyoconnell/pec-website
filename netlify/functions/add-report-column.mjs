@@ -1,20 +1,23 @@
 import 'dotenv/config';
 import { neon } from '@neondatabase/serverless';
 
-export default async (req, context) => {
-    let connString = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || "";
-    connString = connString.replace(/['"]/g, "").trim();
-    connString = connString.replace(/(&|\?)channel_binding=require/, "");
-    if (!connString.includes("sslmode=")) {
-        connString += (connString.includes("?") ? "&" : "?") + "sslmode=require";
+// Simple script to ensure the report_data column exists
+(async () => {
+    const connString = process.env.DATABASE_URL;
+    if (!connString) {
+        console.error("No DATABASE_URL");
+        process.exit(1);
     }
     const sql = neon(connString);
 
     try {
-        console.log("Adding report_data column...");
-        await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS report_data JSONB`;
-        return new Response("Column Added", { status: 200 });
+        console.log("Adding report_data column to matches table...");
+        await sql`
+            ALTER TABLE matches 
+            ADD COLUMN IF NOT EXISTS report_data JSONB;
+        `;
+        console.log("Success.");
     } catch (e) {
-        return new Response(e.message, { status: 500 });
+        console.error("Error:", e);
     }
-};
+})();
