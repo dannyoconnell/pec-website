@@ -858,8 +858,12 @@
 
             if (roster.length === 0) return `<div class="editor-card" style="background:rgba(0,0,0,0.2)"><p style="text-align:center">No Roster for ${team} (${game})</p></div>`;
 
+            // Helper for Row Wrapper
+            const rowStart = (pName) => `<div class="stat-row-input" data-game="${gameIdx || 'total'}" data-player="${pName}" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; font-size:0.9rem;">`;
+            const nameCol = (pName) => `<span style="width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left;" title="${pName}">${pName}</span>`;
+
+            // --- VALORANT ---
             if (game === 'Valorant') {
-                // Datalist for Agents (only need to define once, but here is safe)
                 const agentList = `
                  <datalist id="valorant-agents">
                     <option value="Jett"><option value="Raze"><option value="Reyna"><option value="Phoenix"><option value="Neon"><option value="Yoru"><option value="Iso">
@@ -872,7 +876,6 @@
                     ${agentList}
                     <div class="editor-card" style="background:rgba(0,0,0,0.2); border:none; padding:1rem;">
                         <h5 style="margin-top:0; margin-bottom:0.5rem; text-align:left; border-bottom:1px solid #334155; padding-bottom:0.5rem;">${team}</h5>
-                        
                         <!-- Header -->
                         <div style="display:grid; grid-template-columns: 150px 100px repeat(8, 1fr); gap:0.5rem; margin-bottom:0.5rem; font-size:0.75rem; color:#94a3b8; text-align:center;">
                             <span style="text-align:left;">Player</span>
@@ -886,10 +889,8 @@
                             <span title="Plants">Pl</span>
                             <span title="Defuses">Df</span>
                         </div>
-
                         ${roster.map(p => {
                     const s = stats[p.name] || {};
-                    // Map existing 's' (Score) to ACS if present from old save, or use new 'acs'
                     const acs = s.acs || s.s || 0;
                     return `
                             <div class="stat-row-input" data-game="${gameIdx || 'total'}" data-player="${p.name}" style="display:grid; grid-template-columns: 150px 100px repeat(8, 1fr); gap:0.5rem; align-items:center; margin-bottom:0.5rem; font-size:0.9rem;">
@@ -905,25 +906,99 @@
                                 <input data-stat="df" class="form-control" style="padding:0.2em; text-align:center;" value="${s.df || 0}">
                             </div>
                         `}).join('')}
+                    </div>`;
+            }
+
+            // --- OVERWATCH 2 ---
+            if (game === 'Overwatch 2') {
+                return `
+                    <div class="editor-card" style="background:rgba(0,0,0,0.2); border:none; padding:1rem;">
+                        <h5 style="margin-top:0; border-bottom:1px solid #334; padding-bottom:0.5rem;">${team}</h5>
+                         <!-- Header -->
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; padding-right:0.2rem; font-size:0.75rem; color:#94a3b8; text-align:center;">
+                            <span style="width:100px; text-align:left;">Player</span>
+                            <div style="display:flex; gap:0.2rem;">
+                                <span style="width:40px;">Elims</span>
+                                <span style="width:40px;">Ast</span>
+                                <span style="width:40px;">Dths</span>
+                                <span style="width:45px;">Dmg</span>
+                                <span style="width:45px;">Heal</span>
+                                <span style="width:45px;">Mit</span>
+                            </div>
+                        </div>
+                        ${roster.map(p => {
+                    const s = stats[p.name] || {};
+                    return `
+                            ${rowStart(p.name)}
+                                ${nameCol(p.name)}
+                                <div style="display:flex; gap:0.2rem;">
+                                    <input data-stat="k" placeholder="Elim" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${s.k || 0}">
+                                    <input data-stat="a" placeholder="Ast" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${s.a || 0}">
+                                    <input data-stat="d" placeholder="Dth" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${s.d || 0}">
+                                    <input data-stat="dmg" placeholder="Dmg" class="form-control" style="width:45px; padding:0.2em; text-align:center;" value="${s.dmg || s.s || 0}">
+                                    <input data-stat="heal" placeholder="Heal" class="form-control" style="width:45px; padding:0.2em; text-align:center;" value="${s.heal || s.sh || 0}">
+                                    <input data-stat="mit" placeholder="Mit" class="form-control" style="width:45px; padding:0.2em; text-align:center;" value="${s.mit || 0}">
+                                </div>
+                            </div>
+                        `}).join('')}
                     </div>
                 `;
             }
 
-            // Default (Rocket League / OW2 / Generic)
+            // --- SMASH BROS ---
+            if (game === 'Smash Bros') {
+                return `
+                    <div class="editor-card" style="background:rgba(0,0,0,0.2); border:none; padding:1rem;">
+                        <h5 style="margin-top:0; border-bottom:1px solid #334; padding-bottom:0.5rem;">${team}</h5>
+                        <!-- Header -->
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; padding-right:0.2rem; font-size:0.75rem; color:#94a3b8; text-align:center;">
+                             <span style="width:100px; text-align:left;">Player</span>
+                             <div style="display:flex; gap:0.5rem;">
+                                 <span style="width:60px;">Stocks Taken</span>
+                                 <span style="width:60px;">Stocks Lost</span>
+                             </div>
+                        </div>
+                        ${roster.map(p => {
+                    const s = stats[p.name] || {};
+                    return `
+                             ${rowStart(p.name)}
+                                 ${nameCol(p.name)}
+                                 <div style="display:flex; gap:0.5rem;">
+                                     <input data-stat="k" placeholder="Taken" class="form-control" style="width:60px; padding:0.2em; text-align:center;" value="${s.k || 0}">
+                                     <input data-stat="d" placeholder="Lost" class="form-control" style="width:60px; padding:0.2em; text-align:center;" value="${s.d || 0}">
+                                 </div>
+                             </div>
+                         `}).join('')}
+                    </div>
+                `;
+            }
+
+            // --- ROCKET LEAGUE (Default) ---
             return `
                 <div class="editor-card" style="background:rgba(0,0,0,0.2); border:none; padding:1rem;">
-                    <h5 style="margin-top:0; text-align:center;">${team}</h5>
+                    <h5 style="margin-top:0; text-align:left; border-bottom:1px solid #334; padding-bottom:0.5rem;">${team}</h5>
+                     <!-- Header -->
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; padding-right:0.2rem; font-size:0.75rem; color:#94a3b8; text-align:center;">
+                         <span style="width:80px; text-align:left;">Player</span>
+                         <div style="display:flex; gap:0.2rem;">
+                             <span style="width:40px;" title="Score">Score</span>
+                             <span style="width:35px;" title="Goals">Goal</span>
+                             <span style="width:35px;" title="Shots">Shot</span>
+                             <span style="width:35px;" title="Assists">Asst</span>
+                             <span style="width:35px;" title="Saves">Save</span>
+                         </div>
+                    </div>
                     ${roster.map(p => {
-                const currentStats = stats[p.name] || { k: 0, d: 0, a: 0, s: 0, sh: 0 };
+                const s = stats[p.name] || {};
                 return `
-                        <div class="stat-row-input" data-game="${gameIdx || 'total'}" data-player="${p.name}" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; font-size:0.9rem;">
-                            <span style="width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</span>
+                        ${rowStart(p.name)}
+                            ${nameCol(p.name)}
                             <div style="display:flex; gap:0.2rem;">
-                                <input data-stat="s" placeholder="Pts" title="Score" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${currentStats.s || 0}">
-                                <input data-stat="k" placeholder="G" title="Goals" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${currentStats.k || 0}">
-                                <input data-stat="sh" placeholder="S" title="Shots" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${currentStats.sh || 0}">
-                                <input data-stat="a" placeholder="A" title="Assists" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${currentStats.a || 0}">
-                                <input data-stat="d" placeholder="Sv" title="Saves" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${currentStats.d || 0}">
+                                <input data-stat="s" title="Score" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${s.s || 0}">
+                                <input data-stat="k" title="Goals" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${s.k || 0}">
+                                <input data-stat="sh" title="Shots" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${s.sh || 0}">
+                                <input data-stat="a" title="Assists" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${s.a || 0}">
+                                <input data-stat="d" title="Saves" class="form-control" style="width:35px; padding:0.2em; text-align:center;" value="${s.d || 0}">
                             </div>
                         </div>
                     `}).join('')}
@@ -1236,10 +1311,17 @@
 
                         Object.keys(g.stats).forEach(pName => {
                             const pStat = g.stats[pName];
-                            // Unified Player Object
+                            // Unified Player Object - Spread pStat into core to capture all custom keys (dmg, heal, mit, etc)
                             const playerObj = {
                                 name: pName,
-                                stats: { core: { score: pStat.acs || pStat.s || 0, k: pStat.k, d: pStat.d, a: pStat.a }, valorant: pStat }
+                                stats: {
+                                    core: {
+                                        score: pStat.acs || pStat.s || 0,
+                                        k: pStat.k, d: pStat.d, a: pStat.a,
+                                        ...pStat // Include dmg, heal, mit, etc.
+                                    },
+                                    valorant: pStat
+                                }
                             };
                             replay.blue.players.push(playerObj);
                         });

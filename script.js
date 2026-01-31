@@ -504,7 +504,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const replay = report.matchHistory[mode];
 
                             // Helper to extract into map
-                            // Helper to extract into map
                             const extract = (teamObj) => {
                                 if (teamObj.players) {
                                     teamObj.players.forEach(p => {
@@ -521,13 +520,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         } else {
                                             // Fallback to Standard/Rocket League (Core)
                                             const core = p.stats ? p.stats.core : (p.core || {});
-                                            displayStats[p.name.toLowerCase()] = {
-                                                k: core.goals || 0,
-                                                d: core.saves || 0,
-                                                a: core.assists || 0,
-                                                s: core.score || 0,
-                                                sh: core.shots || 0
-                                            };
+                                            // Logic: If 'goals' exists, use RL mapping. Else use raw keys (OW/Smash manual entry).
+                                            if (core.goals !== undefined) {
+                                                displayStats[p.name.toLowerCase()] = {
+                                                    k: core.goals || 0,
+                                                    d: core.saves || 0,
+                                                    a: core.assists || 0,
+                                                    s: core.score || 0,
+                                                    sh: core.shots || 0
+                                                };
+                                            } else {
+                                                // Generic / Manual Entry (OW, Smash)
+                                                displayStats[p.name.toLowerCase()] = {
+                                                    k: core.k || 0,
+                                                    d: core.d || 0,
+                                                    a: core.a || 0,
+                                                    s: core.s || 0,
+                                                    sh: core.sh || 0,
+                                                    dmg: core.dmg || 0,
+                                                    heal: core.heal || 0,
+                                                    mit: core.mit || 0
+                                                };
+                                            }
                                         }
                                     });
                                 }
@@ -560,6 +574,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                                  <th title="First Bloods" class="hide-mobile">FB</th>
                                  <th title="Plants" class="hide-mobile">Pl</th>
                                  <th class="hide-mobile" title="Defuses">Def</th>
+                             `;
+                        } else if (game === 'Overwatch 2') {
+                            const thead = statsTable.querySelector('thead tr');
+                            thead.innerHTML = `
+                                 <th>Player</th>
+                                 <th title="Eliminations">Elims</th>
+                                 <th title="Assists">Ast</th>
+                                 <th title="Deaths">Dths</th>
+                                 <th title="Damage">Dmg</th>
+                                 <th title="Healing">Heal</th>
+                                 <th title="Mitigation">Mit</th>
+                             `;
+                        } else if (game === 'Smash Bros') {
+                            const thead = statsTable.querySelector('thead tr');
+                            thead.innerHTML = `
+                                 <th>Player</th>
+                                 <th>Stocks Taken</th>
+                                 <th>Stocks Lost</th>
                              `;
                         }
 
@@ -647,7 +679,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                                  `;
                             }
 
-                            // Default Row (RL/OW2)
+                            if (game === 'Overwatch 2') {
+                                return `
+                                    <tr>
+                                        <td>
+                                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                                <div style="width:3px; height:20px; background:${teamColors[teamName]}"></div>
+                                                <span>${p.name}</span>
+                                                <span style="font-size:0.7em; opacity:0.5; margin-left:auto">${teamName}</span>
+                                            </div>
+                                        </td>
+                                        <td style="font-weight:bold">${s.k || 0}</td>
+                                        <td>${s.a || 0}</td>
+                                        <td>${s.d || 0}</td>
+                                        <td>${s.dmg || s.s || 0}</td>
+                                        <td>${s.heal || s.sh || 0}</td>
+                                        <td>${s.mit || 0}</td>
+                                    </tr>
+                                `;
+                            }
+
+                            if (game === 'Smash Bros') {
+                                return `
+                                    <tr>
+                                        <td>
+                                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                                <div style="width:3px; height:20px; background:${teamColors[teamName]}"></div>
+                                                <span>${p.name}</span>
+                                                <span style="font-size:0.7em; opacity:0.5; margin-left:auto">${teamName}</span>
+                                            </div>
+                                        </td>
+                                        <td style="font-weight:bold; color:var(--accent-green)">${s.k || 0}</td>
+                                        <td style="font-weight:bold; color:var(--accent-red)">${s.d || 0}</td>
+                                    </tr>
+                                `;
+                            }
+
+                            // Default Row (Rocket League)
                             const sVal = s.s || 0;
 
                             return `
