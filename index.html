@@ -10,7 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;700&family=Teko:wght@400;600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=carousel">
 </head>
 
 <body>
@@ -31,6 +31,7 @@
             <nav class="main-nav">
                 <ul>
                     <li><a href="index.html" class="active">Home</a></li>
+                    <li><a href="news.html">News</a></li>
                     <li><a href="schedule.html">Schedule</a></li>
                     <li><a href="standings.html">Standings</a></li>
                     <li><a href="teams.html">Teams</a></li>
@@ -60,34 +61,22 @@
     <main>
         <!-- Hero Section: Magazine Grid -->
         <section class="hero-section container">
-            <div class="hero-grid">
-                <div class="hero-main">
-                    <div class="hero-card large">
-                        <!-- Used a placeholder image service that supports custom text/colors -->
-                        <img src="https://placehold.co/800x600/1e293b/ef4444?text=Championship+Finals+Set"
-                            alt="Championship Finals">
-                        <div class="hero-overlay">
-                            <span class="tag">Breaking</span>
-                            <h1>Grand Finals Matchup Decided: Titans vs. Vipers</h1>
-                            <p>Everything you need to know about the upcoming showdown this weekend.</p>
-                        </div>
-                    </div>
+            <div class="hero-split-layout">
+                <!-- Left: News Carousel -->
+                <div id="hero-carousel-container" class="hero-carousel">
+                    <!-- Dynamic News Injected Here -->
                 </div>
-                <div class="hero-side">
-                    <div class="hero-card small">
-                        <img src="https://placehold.co/400x300/1e293b/fbbf24?text=MVP+Race" alt="MVP Race">
-                        <div class="hero-overlay">
-                            <span class="tag">Analysis</span>
-                            <h3>MVP Race: Who is leading the pack?</h3>
-                        </div>
+
+                <!-- Right: Quick Standings -->
+                <div id="hero-standings-container" class="hero-standings">
+                    <div class="standings-header">
+                        <h3>Standings</h3>
+                        <span class="standings-game-label">Rocket League</span>
                     </div>
-                    <div class="hero-card small">
-                        <img src="https://placehold.co/400x300/1e293b/38bdf8?text=Patch+Notes" alt="Patch Notes">
-                        <div class="hero-overlay">
-                            <span class="tag">Update</span>
-                            <h3>Week 5 Patch Notes Impact</h3>
-                        </div>
+                    <div class="hero-standings-body" id="hero-standings-list">
+                        <!-- Dynamic Standings -->
                     </div>
+                    <a href="standings.html" class="standings-link">Full Standings →</a>
                 </div>
             </div>
         </section>
@@ -99,9 +88,9 @@
             <div class="section-header">
                 <h2>Weekly Schedule</h2>
                 <div class="week-selector">
-                    <span class="active">Week 5</span>
-                    <span>Week 6</span>
-                    <span>Week 7</span>
+                    <select id="week-select" class="week-dropdown" aria-label="Select Week">
+                        <!-- Options injected via JS -->
+                    </select>
                 </div>
             </div>
 
@@ -126,7 +115,7 @@
         </div>
     </footer>
 
-    <script src="script.js?v=4"></script>
+    <script src="script.js?v=5"></script>
 </body>
 
 </html>
