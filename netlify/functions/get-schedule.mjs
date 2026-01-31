@@ -1,4 +1,4 @@
-import { neon } from '@netlify/neon';
+import { neon } from '@neondatabase/serverless';
 
 export default async (req, context) => {
     // Aggressive cleanup

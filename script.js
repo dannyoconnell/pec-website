@@ -42,6 +42,35 @@ const getLogoImg = (name, size = '70%') => {
 };
 window.getLogoImg = getLogoImg;
 
+// --- Global Twitch Channels ---
+let twitchChannels = {};
+try {
+    twitchChannels = JSON.parse(localStorage.getItem('pec_channels') || '{}');
+} catch (e) {
+    console.warn('Failed to parse channels', e);
+}
+
+if (Object.keys(twitchChannels).length === 0) {
+    twitchChannels = {
+        'Baylor': 'bayloresports',
+        'Boise State': 'boisestate',
+        'Kansas': 'ku_esports',
+        'Michigan State': 'msueos',
+        'Minnesota': 'uofmnesports',
+        'Nebraska': 'nebraskaesports',
+        'Ohio State': 'ohiostateesports',
+        'Syracuse': 'syracuse',
+        'Utah': 'uofu_esports'
+    };
+}
+window.twitchChannels = twitchChannels;
+
+window.saveTwitchChannels = (newChannels) => {
+    window.twitchChannels = newChannels;
+    localStorage.setItem('pec_channels', JSON.stringify(newChannels));
+    alert('Channel links saved!');
+};
+
 // --- Helper for generating 4-game series (Global) ---
 const generateSeries = (teamA, teamB, timeBase) => {
     // Format Time Helper (24h -> 12h)
@@ -94,9 +123,9 @@ const initialScheduleData = [
 ];
 
 const initialScoresData = [
-    { teamA: 'Kansas', scoreA: 2, teamB: 'Syracuse', scoreB: 1, status: 'FINAL', game: 'Rocket League' },
-    { teamA: 'Utah', scoreA: 0, teamB: 'Baylor', scoreB: 3, status: 'FINAL', game: 'Valorant' },
-    { teamA: 'Mich State', scoreA: 1, teamB: 'Ohio State', scoreB: 1, status: 'LIVE', game: 'Overwatch 2' }
+    { teamA: 'Syracuse', scoreA: 1, teamB: 'Kansas', scoreB: 2, status: 'FINAL', game: 'Rocket League' },
+    { teamA: 'Baylor', scoreA: 3, teamB: 'Utah', scoreB: 0, status: 'FINAL', game: 'Valorant' },
+    { teamA: 'Michigan State', scoreA: 1, teamB: 'Ohio State', scoreB: 1, status: 'LIVE', game: 'Overwatch 2' }
 ];
 
 // --- Roster Generation Logic ---
@@ -649,7 +678,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
                     // Init Filters
-                    if (report.matchHistory && report.matchHistory.length > 0) {
+                    // Init Filters
+                    const history = report.matchHistory;
+                    const hasHistory = history && (Array.isArray(history) ? history.length > 0 : Object.keys(history).length > 0);
+
+                    if (hasHistory) {
                         filterContainer.innerHTML = ''; // Clear
 
                         // Series Button
@@ -660,13 +693,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                         filterContainer.appendChild(btnSeries);
 
                         // Game Buttons
-                        report.matchHistory.forEach((_, idx) => {
+                        // Normalize keys
+                        const keys = Array.isArray(history)
+                            ? history.map((_, i) => i)
+                            : Object.keys(history).sort((a, b) => parseInt(a) - parseInt(b));
+
+                        keys.forEach(k => {
                             const btn = document.createElement('button');
                             btn.className = 'btn btn-sm btn-outline';
-                            btn.textContent = `Game ${idx + 1}`;
-                            btn.onclick = () => { renderTable(idx); updateActive(btn); };
+                            // If Array, k is index (0based), label is k+1. If Object, k is key ('1'), label is k.
+                            const label = Array.isArray(history) ? (parseInt(k) + 1) : k;
+                            btn.textContent = `Game ${label}`;
+                            btn.onclick = () => { renderTable(k); updateActive(btn); };
                             filterContainer.appendChild(btn);
                         });
+
 
                         const updateActive = (target) => {
                             Array.from(filterContainer.children).forEach(c => {
@@ -686,9 +727,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     // Also update Main Score if valid in report
-                    if (report.scoreA !== undefined && report.scoreA !== '') {
-                        document.getElementById('score-A').textContent = report.scoreA;
-                        document.getElementById('score-B').textContent = report.scoreB;
+                    if (report.scoreA !== undefined && report.scoreA !== null) {
+                        document.getElementById('score-A').textContent = report.scoreA === '' ? '0' : report.scoreA;
+                        document.getElementById('score-B').textContent = (report.scoreB === undefined || report.scoreB === null || report.scoreB === '') ? '0' : report.scoreB;
                     }
 
                 } else {
@@ -739,15 +780,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!homeScheduleGrid) return;
 
         // Update Week Selector Visuals on Landing Page
-        const weekSelectorDiv = document.querySelector('.week-selector');
-        if (weekSelectorDiv) {
-            // This selector is visual-only in the HTML, but we should probably update it to reflect current week
-            // Or better, replace it with just a display of the current week since Admin controls it now?
-            // User requirement: "Option to select which week it is. This will ensure the correct week... is displayed"
-            // So the 'Week Selector' on the landing page might actually be redundant or should just show the active week.
+        // Update Week Selector (Dropdown)
+        const weekSelect = document.getElementById('week-select');
+        if (weekSelect) {
+            // Populate if empty
+            if (weekSelect.options.length === 0 && scheduleData.length > 0) {
+                scheduleData.forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = w.week;
+                    opt.textContent = `Week ${w.week}`;
+                    weekSelect.appendChild(opt);
+                });
 
-            // Let's update the text locally to match our currentWeek state
-            weekSelectorDiv.innerHTML = `<span class="active">Week ${currentWeek}</span>`;
+                // Add Change Listener
+                weekSelect.addEventListener('change', (e) => {
+                    currentWeek = parseInt(e.target.value);
+                    renderHomeSchedule();
+                    renderTicker(activeGameFilter);
+                });
+            }
+
+            // Sync Value
+            weekSelect.value = currentWeek;
         }
 
         // Find this week's matches
@@ -803,6 +857,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Re-render components
             renderTicker(activeGameFilter);
             renderHomeSchedule();
+            renderHeroStandings(activeGameFilter);
 
             // Standings Page Specific - check if we need to update table
             // Note: The table update logic is best handled by a specific listener on the standings page
@@ -817,9 +872,261 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
 
+    // --- Dynamic News Logic ---
+    // --- Dynamic News Logic ---
+    // --- Dynamic News Logic (Carousel) ---
+    // --- Dynamic News Logic (Carousel) ---
+    const renderHeroNews = () => {
+        const heroContainer = document.getElementById('hero-carousel-container');
+        if (!heroContainer) return;
+
+        let articles = [];
+        try {
+            articles = JSON.parse(localStorage.getItem('pec_news') || '[]');
+        } catch (e) { console.warn(e); }
+
+        if (articles.length === 0) {
+            heroContainer.innerHTML = `
+                <div class="carousel-track">
+                     <div class="hero-card large" style="min-width:100%; display:flex; flex-direction:column;">
+                        <div class="hero-card-img-container">
+                            <img src="placeholder.png" alt="Welcome" style="object-fit:cover;">
+                        </div>
+                        <div class="hero-content">
+                            <span class="tag">Welcome</span>
+                            <h1>Welcome to the PEC</h1>
+                            <div class="hero-meta">Check back for updates.</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Generate Slides
+        const createSlide = (a) => `
+            <a href="article.html?id=${a.id}" class="hero-card large" style="text-decoration:none; color:inherit; display:flex; flex-direction:column;">
+                <div class="hero-card-img-container">
+                    <img src="${a.img}" alt="${a.title}">
+                </div>
+                <div class="hero-content">
+                    <span class="tag">${a.tag}</span>
+                    <h1>${a.title}</h1>
+                    <div class="hero-meta">
+                         <span style="color:var(--text-main); font-weight:700;">${a.author || 'PEC Staff'}</span> <br>
+                         ${a.date}
+                    </div>
+                </div>
+            </a>
+        `;
+
+        heroContainer.innerHTML = `
+            <div class="carousel-track" id="hero-track">
+                ${articles.map(createSlide).join('')}
+            </div>
+        `;
+
+        // Start Auto-Scroll
+        initCarousel(articles.length);
+    };
+
+    let carouselInterval;
+    const initCarousel = (count) => {
+        if (count <= 1) return;
+
+        const track = document.getElementById('hero-track');
+        let index = 0;
+
+        if (carouselInterval) clearInterval(carouselInterval);
+
+        carouselInterval = setInterval(() => {
+            index++;
+            if (index >= count) {
+                index = 0;
+            }
+            track.style.transform = `translateX(-${index * 100}%)`;
+        }, 5000);
+    };
+
+    // --- Hero Standings Logic ---
+    const calculateStandings = (gameFilter) => {
+        const standings = {};
+
+        // Initialize
+        teams.forEach(t => {
+            if (t !== 'BYE') {
+                standings[t] = { team: t, wins: 0, losses: 0, ties: 0 };
+            }
+        });
+
+        scheduleData.forEach(week => {
+            if (!week.matches) return;
+            week.matches.forEach(m => {
+                if (m.teamA === 'BYE' || m.teamB === 'BYE') return;
+
+                // Filter by Game
+                if (gameFilter !== 'all' && m.game !== gameFilter) return;
+
+                // Check Status/Score
+                // We use the report or the direct match score if available
+                const reportId = `${m.week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '');
+                const report = matchReports[reportId];
+
+                let scoreA = m.scoreA;
+                let scoreB = m.scoreB;
+                let status = m.status;
+
+                if (report) {
+                    if (report.scoreA !== undefined) scoreA = report.scoreA;
+                    if (report.scoreB !== undefined) scoreB = report.scoreB;
+                    if (report.status) status = report.status;
+                }
+
+                if (status === 'FINAL' || (scoreA !== undefined && scoreA !== null && scoreA !== '' && scoreA !== '-')) {
+                    const sA = parseInt(scoreA);
+                    const sB = parseInt(scoreB);
+
+                    if (isNaN(sA) || isNaN(sB)) return;
+
+                    if (sA > sB) {
+                        if (standings[m.teamA]) standings[m.teamA].wins++;
+                        if (standings[m.teamB]) standings[m.teamB].losses++;
+                    } else if (sB > sA) {
+                        if (standings[m.teamB]) standings[m.teamB].wins++;
+                        if (standings[m.teamA]) standings[m.teamA].losses++;
+                    } else {
+                        // Tie (rare in some games but possible)
+                        if (standings[m.teamA]) standings[m.teamA].ties++;
+                        if (standings[m.teamB]) standings[m.teamB].ties++;
+                    }
+                }
+            });
+        });
+
+        // Convert to Array and Sort
+        return Object.values(standings).sort((a, b) => {
+            // Win Pct
+            const totalA = a.wins + a.losses + a.ties;
+            const totalB = b.wins + b.losses + b.ties;
+
+            // If mixed games (All), simply sort by Total Wins first? 
+            // Or Win %? Win % is usually better but for "All" it might favor low sample size.
+            // Let's go with Wins for "All" simply because it's an aggregate count kind of feel, 
+            // but Win % is standard. Let's stick to standard ordering: Win% -> Wins -> Alpha.
+
+            const pctA = totalA > 0 ? a.wins / totalA : 0;
+            const pctB = totalB > 0 ? b.wins / totalB : 0;
+
+            if (pctB !== pctA) return pctB - pctA;
+            if (b.wins !== a.wins) return b.wins - a.wins;
+            return a.team.localeCompare(b.team);
+        });
+    };
+
+    const renderHeroStandings = (game = 'all') => {
+        const container = document.getElementById('hero-standings-list');
+        const headerLabel = document.querySelector('.hero-standings .standings-game-label');
+        if (!container) return;
+
+        if (headerLabel) {
+            headerLabel.textContent = game === 'all' ? 'OVERALL STANDINGS' : game.toUpperCase();
+        }
+
+        const fullStandings = calculateStandings(game);
+        // Show All Teams (User Request)
+        const topTeams = fullStandings;
+
+        if (topTeams.length === 0) {
+            container.innerHTML = '<p style="padding:1rem; text-align:center; color:var(--text-muted)">No standings available.</p>';
+            return;
+        }
+
+        container.innerHTML = topTeams.map((row, index) => `
+            <div class="mini-standings-row" style="cursor:pointer;" onclick="window.location.href='team.html?id=${encodeURIComponent(row.team)}'">
+                <div class="mini-rank" style="color: ${index === 0 ? 'var(--accent-red)' : 'var(--text-muted)'}">${index + 1}</div>
+                <div class="mini-team">
+                     <div style="width:24px; height:24px; display:flex; align-items:center; justify-content:center;">${getLogoImg(row.team, '100%')}</div>
+                     <span style="font-size:0.9rem;">${row.team}</span>
+                </div>
+                <div class="mini-record" style="font-size:0.85rem;">${row.wins}-${row.losses}</div>
+            </div>
+        `).join('');
+
+        // Add "view full" link at bottom if needed or rely on the main button
+    };
+
+    // --- News Page Logic ---
+    const renderNewsPage = () => {
+        const grid = document.getElementById('news-grid');
+        if (!grid) return;
+
+        let articles = [];
+        try {
+            articles = JSON.parse(localStorage.getItem('pec_news') || '[]');
+        } catch (e) { console.warn(e); }
+
+        if (articles.length === 0) {
+            grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--text-muted)">No news articles yet.</p>';
+            return;
+        }
+
+        grid.innerHTML = articles.map(a => `
+             <a href="article.html?id=${a.id}" class="match-card" style="text-decoration:none; color:inherit; display:block; padding:0; overflow:hidden;">
+                <div style="height:200px; overflow:hidden;">
+                    <img src="${a.img}" style="width:100%; height:100%; object-fit:cover; transition:transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                </div>
+                <div style="padding:1.5rem;">
+                    <span class="tag" style="font-size:0.75rem; margin-bottom:0.5rem;">${a.tag}</span>
+                    <h3 style="font-family:var(--font-head); font-size:1.5rem; line-height:1.2; margin-bottom:0.5rem;">${a.title}</h3>
+                    <p style="color:var(--text-muted); font-size:0.9rem;">${a.date}</p>
+                </div>
+             </a>
+        `).join('');
+    };
+
+    const renderArticlePage = () => {
+        const view = document.getElementById('article-view');
+        if (!view) return;
+
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+
+        let articles = [];
+        try {
+            articles = JSON.parse(localStorage.getItem('pec_news') || '[]');
+        } catch (e) { }
+
+        const article = articles.find(a => a.id === id);
+
+        if (!article) {
+            view.innerHTML = `
+                <div style="text-align:center; padding:4rem;">
+                    <h1>Article Not Found</h1>
+                    <a href="news.html" class="btn btn-primary" style="margin-top:1rem; text-decoration:none; display:inline-block;">Back to News</a>
+                </div>`;
+            return;
+        }
+
+        view.innerHTML = `
+            <a href="news.html" class="back-link">← Back to News</a>
+            <div class="article-header">
+                <div class="article-meta">${article.date} • <span style="color:var(--accent-red)">${article.tag}</span></div>
+                <h1 class="article-title">${article.title}</h1>
+            </div>
+            <img src="${article.img}" class="article-hero-img" alt="${article.title}">
+            <div class="article-body">
+                ${article.content}
+            </div>
+        `;
+    };
+
     // --- Init ---
     renderTicker();
     renderHomeSchedule();
+    renderHeroNews();
+    renderHeroStandings('all');
+    renderNewsPage();
+    renderArticlePage();
 
 
     // --- Matchup Page Logic ---
@@ -966,12 +1273,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (standingsBody) {
 
         const renderStandingsTable = (game) => {
-            const data = standingsData[game];
-            if (!data) return;
+            // Use the shared dynamic calculation
+            const data = calculateStandings(game);
 
+            if (!data || data.length === 0) {
+                standingsBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:1rem;">No Data</td></tr>';
+                return;
+            }
 
+            standingsBody.innerHTML = data.map((row, index) => {
+                const total = row.wins + row.losses + row.ties;
+                const pct = total > 0 ? ((row.wins / total) * 100).toFixed(1) + '%' : '-';
+                // Streak is not currently calculated in calculateStandings. Defaulting to '-'
+                const streak = '-';
 
-            standingsBody.innerHTML = data.map((row, index) => `
+                return `
                 <tr>
                     <td style="text-align:center; color: var(--text-muted)">${index + 1}</td>
                     <td>
@@ -984,10 +1300,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </td>
                     <td>${row.wins}</td>
                     <td>${row.losses}</td>
-                    <td>${row.pct}</td>
-                    <td style="color: var(--text-muted)">${row.streak}</td>
+                    <td>${pct}</td>
+                    <td style="color: var(--text-muted)">${streak}</td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         };
 
         // Initial Render
@@ -1104,11 +1421,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                             let status = m.status;
 
                             if (report) {
-                                if (report.scoreA !== undefined) scoreA = parseInt(report.scoreA);
-                                if (report.scoreB !== undefined) scoreB = parseInt(report.scoreB);
+                                if (report.scoreA !== undefined && report.scoreA !== null && report.scoreA !== '') scoreA = parseInt(report.scoreA);
+                                if (report.scoreB !== undefined && report.scoreB !== null && report.scoreB !== '') scoreB = parseInt(report.scoreB);
                                 if (report.status) status = report.status;
                                 // Auto-detect final if scores exist
                                 if (scoreA !== undefined && scoreA !== null && !isNaN(scoreA)) status = 'FINAL';
+                            }
+
+                            // 0-Fix: If FINAL, treat missing/NaN scores as 0
+                            if (status === 'FINAL') {
+                                if (scoreA === null || scoreA === undefined || isNaN(scoreA)) scoreA = 0;
+                                if (scoreB === null || scoreB === undefined || isNaN(scoreB)) scoreB = 0;
                             }
 
                             // Determine Result Display
@@ -1180,7 +1503,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     rosterContainer.innerHTML = filteredRoster.map(p => `
                         <div class="player-card">
                             <div class="player-avatar">
-                                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random&color=fff&size=100" alt="${p.name}">
+                                <img src="${p.photo ? p.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random&color=fff&size=100`}" alt="${p.name}">
                             </div>
                             <div class="player-info">
                                 <a href="player.html?player=${encodeURIComponent(p.name)}&team=${encodeURIComponent(teamId)}" style="text-decoration:none; color:inherit;">
@@ -1248,17 +1571,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Watch Page Logic ---
     const watchPage = document.querySelector('.watch-hero');
     if (watchPage) {
-        const twitchChannels = {
-            'Baylor': 'bayloresp',
-            'Boise State': 'boisestate',
-            'Kansas': 'ku_esports',
-            'Michigan State': 'msu_esports',
-            'Minnesota': 'uofmn',
-            'Nebraska': 'nebraskaesports',
-            'Ohio State': 'ohiostateesports',
-            'Syracuse': 'syracuse',
-            'Utah': 'uofu_esports'
-        };
+        // Global twitchChannels used
+
 
         // Render Featured Stream (Mock)
         // Pick a random match from tickets
@@ -1675,3 +1989,305 @@ window.renderTeamStats = () => {
         statsContainer.innerHTML = `<p style="padding:2rem; text-align:center;">Stats coming soon.</p>`;
     }
 };
+
+// --- Player Profile Page Logic ---
+window.renderPlayerPage = () => {
+    if (!document.body.classList.contains('player-profile-page')) return;
+
+    // Wait for Roster Data if not ready
+    if (Object.keys(window.rosterData || {}).length === 0) {
+        setTimeout(window.renderPlayerPage, 200);
+        return;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const playerName = urlParams.get('player');
+    const teamName = urlParams.get('team'); // Optional if unique names, but safer with team
+
+    if (!playerName) {
+        document.getElementById('player-not-found').style.display = 'block';
+        return;
+    }
+
+    // Find Player
+    // If team is known, optimize. Else search all.
+    let p = null;
+    let finalTeamName = teamName;
+
+    if (teamName && window.rosterData[teamName]) {
+        p = window.rosterData[teamName].find(r => r.name === playerName);
+    } else {
+        // Search globally
+        for (const [t, roster] of Object.entries(window.rosterData)) {
+            const found = roster.find(r => r.name === playerName);
+            if (found) {
+                p = found;
+                finalTeamName = t;
+                break;
+            }
+        }
+    }
+
+    if (!p) {
+        document.getElementById('player-not-found').style.display = 'block';
+        return;
+    }
+
+    // Unhide Content
+    document.getElementById('player-content').style.display = 'block';
+
+    // Populate Data
+    document.getElementById('player-name').textContent = p.name;
+    document.getElementById('player-team').textContent = finalTeamName;
+    document.getElementById('player-role-label').textContent = p.role || 'Player'; // Top Label
+    document.getElementById('player-game-display').textContent = p.game; // Bottom Meta
+
+    // Images
+    const photoUrl = p.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=1e293b&color=fff&size=256`;
+    document.getElementById('player-img').src = photoUrl;
+
+    // Team Logo Watermark & Pill
+    const logoUrl = window.teamLogos[finalTeamName] || 'placeholder.png';
+    const watermark = document.getElementById('hero-watermark');
+    if (watermark) watermark.src = logoUrl;
+
+    const metaLogo = document.getElementById('meta-team-logo');
+    if (metaLogo) metaLogo.src = logoUrl;
+
+    // Background Image based on Game (Local Assets)
+    const bgMap = {
+        'Rocket League': 'assets/games/rocketleague.jpg',
+        'Valorant': 'assets/games/valorant.png',
+        'Overwatch 2': 'assets/games/overwatch2.png',
+        'Smash Bros': 'assets/games/smashbros_hd.jpg', // User provided HD
+        'Call of Duty': 'https://www.callofduty.com/content/dam/atvi/callofduty/cod-touchui/mw3/meta/mw3-meta-share.jpg' // MW3 Official
+    };
+    const bgUrl = bgMap[p.game] || bgMap['Rocket League'];
+    const heroBg = document.getElementById('hero-bg');
+    if (heroBg) heroBg.style.backgroundImage = `url('${bgUrl}')`;
+
+    // --- Stats Calculation ---
+    // 1. Filter Match Reports for this Player/Team/Game
+    const playerStats = {
+        gamesPlayed: 0, // Sub-games (maps/rounds)
+        seriesPlayed: 0,
+        // Accumulators
+        k: 0, d: 0, a: 0, s: 0, sh: 0, // Generic
+        chealing: 0, cdamage: 0, // OW Custom
+        stocksLost: 0, // Smash
+        // Valorant
+        acs: 0, econ: 0, fb: 0, pl: 0, df: 0
+    };
+
+    // Iterate all matches to find reports
+    // We use scheduleData to access all weeks
+    scheduleData.forEach(week => {
+        if (!week.matches) return;
+        week.matches.forEach(m => {
+            // Must match Team and Game
+            if ((m.teamA !== finalTeamName && m.teamB !== finalTeamName) || m.game !== p.game) return;
+
+            // Get Report
+            const reportId = `${m.week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '');
+            const report = matchReports[reportId];
+            if (!report) return; // No data yet
+
+            // Determine if player played using Name Check in report stats
+            // If specific stats exist, use them. If aggregate exists, use that.
+            let pStat = null;
+
+            // Check top-level stats (Rocket League / Generic)
+            if (report.stats && report.stats[p.name]) {
+                pStat = report.stats[p.name];
+            }
+            // Check Valorant Games (if detailed)
+            else if (report.games) {
+                // Sum up sub-games
+                Object.values(report.games).forEach(g => {
+                    if (g.stats && g.stats[p.name]) {
+                        // For Val, we sum here directly or aggregate later? 
+                        // Let's aggregate here just for "Played" check
+                        pStat = g.stats[p.name]; // Just marking presence
+                    }
+                });
+            }
+
+            // If we found stats for this player in this match, add to totals
+            // Note: If player didn't play (sub), pStat might be null. 
+            // For now, assume if Roster matches, they played unless detailed logs say otherwise.
+            // But we only want to sum stats if we have them.
+
+            // Calculating "Sub-Games" (Maps/Sets)
+            // Default: Sum of score (e.g. 3-0 = 3 games)
+            let matchSubGames = (parseInt(report.scoreA) || 0) + (parseInt(report.scoreB) || 0);
+            if (matchSubGames === 0) matchSubGames = 1; // Fallback if live or data missing
+
+            // However, for Stats, we usually only have the "Series Total" in the report.stats object for RL/OW.
+            // For Val, we have per-game.
+
+            if (p.game === 'Valorant') {
+                // Valorant Logic: Iterate report.games
+                if (report.games) {
+                    Object.values(report.games).forEach(g => {
+                        if (g.stats && g.stats[p.name]) {
+                            const vals = g.stats[p.name];
+                            playerStats.gamesPlayed++;
+                            playerStats.k += parseInt(vals.k || 0);
+                            playerStats.d += parseInt(vals.d || 0);
+                            playerStats.a += parseInt(vals.a || 0);
+                            playerStats.acs += parseInt(vals.acs || 0);
+                            playerStats.econ += parseInt(vals.econ || 0);
+                            playerStats.fb += parseInt(vals.fb || 0);
+                            playerStats.pl += parseInt(vals.pl || 0);
+                            playerStats.df += parseInt(vals.df || 0);
+                        }
+                    });
+                }
+            } else {
+                // RL / OW / Smash (Aggregate stored in report.stats)
+                if (report.stats && report.stats[p.name]) {
+                    const vals = report.stats[p.name];
+
+                    // Add Series Count
+                    playerStats.seriesPlayed++;
+                    playerStats.gamesPlayed += matchSubGames;
+
+                    playerStats.k += parseInt(vals.k || 0);
+                    playerStats.d += parseInt(vals.d || 0);
+                    playerStats.a += parseInt(vals.a || 0);
+                    playerStats.s += parseInt(vals.s || 0);
+                    playerStats.sh += parseInt(vals.sh || 0);
+                }
+            }
+        });
+    });
+
+    // Render Stats Grid
+    const statsGrid = document.querySelector('.career-stats-grid');
+    if (statsGrid) {
+        let cardsHTML = '';
+        const gp = playerStats.gamesPlayed || 1; // Avoid div/0
+
+        const avg = (val) => (val / gp).toFixed(1);
+
+        if (p.game === 'Rocket League') {
+            // Score, Goals, Assist, Shots, Saves
+            // Map: s=Score, k=Goals, a=Assist, sh=Shots, d=Saves
+            cardsHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.s)}</div>
+                    <div class="stat-label">Score per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.k)}</div>
+                    <div class="stat-label">Goals per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.a)}</div>
+                    <div class="stat-label">Assists per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.sh)}</div>
+                    <div class="stat-label">Shots per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.d)}</div>
+                    <div class="stat-label">Saves per game</div>
+                </div>
+            `;
+        } else if (p.game === 'Overwatch 2') {
+            // Elims, Assist, Deaths, Dmg, Heal
+            // Map: k=Elims, a=Assist, d=Deaths, s=Damage(prov), sh=Heal(prov)
+            // Note: Admin inputs currently are generic. Assuming 's' is reused for Dmg? 
+            // If not, we show 0 and user needs to assume they input Dmg into "Pts" or we fix Admin later.
+            cardsHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.k)}</div>
+                    <div class="stat-label">Elims per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.a)}</div>
+                    <div class="stat-label">Assists per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.d)}</div>
+                    <div class="stat-label">Deaths per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.s)}</div> <!-- Prov: Score -> Dmg -->
+                    <div class="stat-label">Damage per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.sh)}</div> <!-- Prov: Shots -> Heal -->
+                    <div class="stat-label">Healing per game</div>
+                </div>
+            `;
+        } else if (p.game === 'Valorant') {
+            // ACS, K, D, A, Econ, FB, Pl, Def
+            cardsHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.acs).split('.')[0]}</div>
+                    <div class="stat-label">ACS per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.k)}</div>
+                    <div class="stat-label">Kills per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.d)}</div>
+                    <div class="stat-label">Deaths per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.a)}</div>
+                    <div class="stat-label">Assists per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.econ).split('.')[0]}</div>
+                    <div class="stat-label">Econ per game</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.fb)}</div>
+                    <div class="stat-label">FB per game</div>
+                </div>
+                 <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.pl)}</div>
+                    <div class="stat-label">Plants per game</div>
+                </div>
+                 <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.df)}</div>
+                    <div class="stat-label">Defuses per game</div>
+                </div>
+            `;
+        } else if (p.game === 'Smash Bros') {
+            // Stocks Taken (k), Stocks Lost (d)
+            cardsHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.k)}</div>
+                    <div class="stat-label">Stocks Taken per game</div>
+                </div>
+                 <div class="stat-card">
+                    <div class="stat-value">${avg(playerStats.d)}</div>
+                    <div class="stat-label">Stocks Lost per game</div>
+                </div>
+            `;
+        }
+
+        // Always show Games Played
+        cardsHTML += `
+            <div class="stat-card">
+                <div class="stat-value">${playerStats.gamesPlayed}</div>
+                <div class="stat-label">Games Played</div>
+            </div>
+        `;
+
+        statsGrid.innerHTML = cardsHTML;
+        // Adjusted for Split Layout: 2 Columns is best for the narrower space
+        statsGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    }
+};
+
+// Init
+window.addEventListener('DOMContentLoaded', () => {
+    // Other inits defined above...
+    window.renderPlayerPage();
+});

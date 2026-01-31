@@ -1,4 +1,4 @@
-import { neon } from '@netlify/neon';
+import { neon } from '@neondatabase/serverless';
 
 export default async (req, context) => {
     // Aggressive cleanup
@@ -29,9 +29,10 @@ export default async (req, context) => {
             if (!rosterData[row.team]) rosterData[row.team] = [];
             rosterData[row.team].push({
                 id: row.id,
-                name: row.player_name,
+                name: row.name,
                 role: row.role,
-                game: row.game
+                game: row.game,
+                photo: row.photo
             });
         }
 

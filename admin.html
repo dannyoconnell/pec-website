@@ -9,6 +9,8 @@
         href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;700&family=Teko:wght@400;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
         .admin-login-overlay {
@@ -17,11 +19,54 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 1000;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 9999;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        /* Cropper Modal */
+        .crop-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .crop-container {
+            background: #1e293b;
+            padding: 1rem;
+            border-radius: 8px;
+            max-width: 90vw;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .crop-image-wrapper {
+            max-width: 600px;
+            max-height: 60vh;
+            overflow: hidden;
+        }
+
+        .crop-image-wrapper img {
+            max-width: 100%;
+        }
+
+        .crop-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
         }
 
         .admin-dashboard {
@@ -128,7 +173,8 @@
                 <div class="admin-nav-item" onclick="switchTab('schedule')">Schedule Editor</div>
                 <div class="admin-nav-item" onclick="switchTab('roster')">Roster Editor</div>
                 <div class="admin-nav-item" onclick="switchTab('reports')">Match Reports</div>
-                <div class="admin-nav-item" onclick="switchTab('settings')">Global Settings</div>
+                <div class="admin-nav-item" onclick="switchTab('news')">News Editor</div>
+                <div class="admin-nav-item" onclick="switchTab('watch')">Watch Links</div>
             </aside>
 
             <main class="admin-content">
@@ -181,7 +227,8 @@
                     </div>
                     <div id="roster-editor-list"></div>
                     <button class="btn btn-outline" onclick="addPlayerRow()">+ Add Player</button>
-                    <button class="btn btn-primary" style="margin-top:2rem;" onclick="saveRoster()">Save Roster</button>
+                    <button class="btn btn-primary" type="button" style="margin-top:2rem;" onclick="saveRoster()">Save
+                        Roster</button>
                 </div>
 
                 <!-- Match Reports -->
@@ -212,28 +259,85 @@
                     <div id="match-reports-list" style="display:flex; flex-direction:column; gap:1rem;"></div>
                 </div>
 
-                <!-- Global Settings -->
-                <div id="view-settings" style="display:none;">
-                    <h2>Global Site Settings</h2>
-                    <div class="editor-card">
-                        <div class="form-group">
-                            <label>Current Active Week</label>
-                            <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.5rem;">Controls the
-                                landing page schedule and filtered ticker scores.</p>
-                            <select id="setting-current-week" class="form-control" style="max-width:200px;">
-                                <option value="1">Week 1</option>
-                                <option value="2">Week 2</option>
-                                <option value="3">Week 3</option>
-                                <option value="4">Week 4</option>
-                                <option value="5">Week 5</option>
-                                <option value="6">Week 6</option>
-                                <option value="7">Week 7</option>
-                                <option value="8">Week 8</option>
-                                <option value="9">Week 9</option>
-                            </select>
+                <!-- News Editor -->
+                <div id="view-news" style="display:none;">
+                    <h2>News & Featured Articles</h2>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+                        <!-- Col 1: Editor -->
+                        <div>
+                            <div class="editor-card">
+                                <h3>Compose Article</h3>
+                                <div class="form-group">
+                                    <label>Title</label>
+                                    <input type="text" id="news-title" class="form-control" placeholder="Headline">
+                                </div>
+                                <div class="form-group">
+                                    <label>Author</label>
+                                    <input type="text" id="news-author" class="form-control"
+                                        placeholder="e.g. John Doe">
+                                </div>
+                                <div class="form-group">
+                                    <label>Image URL</label>
+                                    <input type="text" id="news-image" class="form-control" placeholder="https://..."
+                                        oninput="previewNewsImage()">
+                                    <div id="news-img-preview"
+                                        style="margin-top:0.5rem; height:150px; background:#1e293b; border-radius:4px; overflow:hidden; display:none;">
+                                        <img style="width:100%; height:100%; object-fit:cover;">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tag / Category</label>
+                                    <input type="text" id="news-tag" class="form-control"
+                                        placeholder="e.g. Breaking, Analysis, Recap">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Content (HTML Supported)</label>
+                                    <div class="toolbar" style="margin-bottom:0.5rem; display:flex; gap:0.5rem;">
+                                        <button class="btn btn-sm btn-outline" onclick="formatDoc('bold')"
+                                            title="Bold"><b>B</b></button>
+                                        <button class="btn btn-sm btn-outline" onclick="formatDoc('italic')"
+                                            title="Italic"><i>I</i></button>
+                                        <button class="btn btn-sm btn-outline" onclick="formatDoc('removeFormat')"
+                                            title="Clear Format">Clear</button>
+                                    </div>
+                                    <div id="news-content" contenteditable="true" class="form-control"
+                                        style="min-height:200px; height:auto; overflow-y:auto;"></div>
+                                </div>
+
+                                <div class="form-group" style="display:flex; align-items:center; gap:0.5rem;">
+                                    <input type="checkbox" id="news-featured" style="width:20px; height:20px;">
+                                    <label for="news-featured" style="margin:0; cursor:pointer;">Feature on Home Page
+                                        (Large Slot)</label>
+                                </div>
+
+                                <div style="display:flex; gap:1rem; margin-top:2rem;">
+                                    <button class="btn btn-primary" onclick="saveArticle()">Publish Article</button>
+                                    <button class="btn btn-outline" onclick="clearArticleForm()">Clear</button>
+                                </div>
+                            </div>
                         </div>
-                        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+
+                        <!-- Col 2: List -->
+                        <div>
+                            <h3>Published Articles</h3>
+                            <div id="news-list" style="display:flex; flex-direction:column; gap:1rem;">
+                                <!-- Injected via JS -->
+                            </div>
+                        </div>
                     </div>
+                </div>
+                <!-- Watch Links Editor -->
+                <div id="view-watch" style="display:none;">
+                    <h2>Manage School Stream Links</h2>
+                    <p style="color:var(--text-muted);">Enter the Twitch channel name (e.g., 'boisestate') or full URL
+                        for each school.</p>
+                    <div id="watch-editor-list"
+                        style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-top:1.5rem;">
+                        <!-- Populated by JS -->
+                    </div>
+                    <button class="btn btn-primary" style="margin-top:2rem;" onclick="saveWatchLinks()">Save
+                        Links</button>
                 </div>
             </main>
         </div>
@@ -265,25 +369,141 @@
             loadScheduleEditor();
             initRosterDropdown();
             loadReports();
-            loadSettings();
+            renderNewsEditor(); // Init News Editor
+            renderWatchEditor(); // Init Watch Editor
         }
 
-        function loadSettings() {
-            try {
-                const settings = JSON.parse(localStorage.getItem('pec_settings') || '{}');
-                document.getElementById('setting-current-week').value = settings.currentWeek || '1';
-            } catch (e) {
-                console.warn("Error loading settings", e);
+        // --- WATCH KEY EDITOR LOGIC ---
+        function renderWatchEditor() {
+            const container = document.getElementById('watch-editor-list');
+            if (!container) return;
+
+            // Get global channels (loaded in script.js)
+            const channels = window.twitchChannels || {};
+            const teams = Object.keys(window.teamLogos || {}).filter(t => t !== 'BYE').sort();
+
+            container.innerHTML = teams.map(team => {
+                const currentVal = channels[team] || '';
+                return `
+                <div class="editor-card">
+                    <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+                        ${window.getLogoImg ? window.getLogoImg(team, '40px') : ''}
+                        <h3>${team}</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Twitch Channel / URL</label>
+                        <input type="text" class="form-control watch-input" data-team="${team}" value="${currentVal}" placeholder="e.g. boisestate">
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function saveWatchLinks() {
+            const inputs = document.querySelectorAll('.watch-input');
+            const newChannels = {};
+            inputs.forEach(input => {
+                const team = input.getAttribute('data-team');
+                const val = input.value.trim();
+                if (val) newChannels[team] = val;
+            });
+
+            if (window.saveTwitchChannels) {
+                window.saveTwitchChannels(newChannels);
+            } else {
+                alert('Error: Save function not found.');
             }
         }
 
-        function saveSettings() {
-            const currentWeek = document.getElementById('setting-current-week').value;
-            const settings = {
-                currentWeek: currentWeek
+        // --- NEWS EDITOR LOGIC ---
+        let articles = [];
+        try {
+            articles = JSON.parse(localStorage.getItem('pec_news') || '[]');
+        } catch (e) {
+            console.warn("Error loading news", e);
+        }
+
+        function saveArticle() {
+            const title = document.getElementById('news-title').value;
+            const author = document.getElementById('news-author').value;
+            const img = document.getElementById('news-image').value;
+            const tag = document.getElementById('news-tag').value;
+            const content = document.getElementById('news-content').innerHTML;
+            const isFeatured = document.getElementById('news-featured').checked;
+
+            if (!title) return alert('Title is required');
+
+            const newArticle = {
+                id: Date.now().toString(),
+                title,
+                author: author || 'PEC Staff',
+                img: img || 'placeholder.png',
+                tag: tag || 'News',
+                content,
+                featured: isFeatured,
+                date: new Date().toLocaleDateString()
             };
-            localStorage.setItem('pec_settings', JSON.stringify(settings));
-            alert('Settings Saved! Current Week is now Week ' + currentWeek);
+
+            // If new isFeatured, unfeature others?
+            if (isFeatured) {
+                articles.forEach(a => a.featured = false);
+            }
+
+            articles.unshift(newArticle);
+            localStorage.setItem('pec_news', JSON.stringify(articles));
+
+            alert('Article Published!');
+            clearArticleForm();
+            renderNewsEditor();
+        }
+
+        function deleteArticle(id) {
+            if (!confirm('Delete this article?')) return;
+            articles = articles.filter(a => a.id !== id);
+            localStorage.setItem('pec_news', JSON.stringify(articles));
+            renderNewsEditor();
+        }
+
+        function renderNewsEditor() {
+            const list = document.getElementById('news-list');
+            if (!list) return;
+
+            list.innerHTML = articles.map(a => `
+                <div class="editor-card" style="display:flex; gap:1rem; align-items:center; padding:1rem;">
+                    <img src="${a.img}" style="width:80px; height:60px; object-fit:cover; border-radius:4px;">
+                    <div style="flex:1">
+                        <div style="font-weight:bold;">${a.title}</div>
+                        <div style="font-size:0.8rem; color:#94a3b8;">${a.date} • ${a.tag} ${a.featured ? '<span style="color:#f43f5e; margin-left:0.5rem;">★ Featured</span>' : ''}</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline" style="border-color:#ef4444; color:#ef4444;" onclick="deleteArticle('${a.id}')">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        // Editor Helpers
+        function previewNewsImage() {
+            const url = document.getElementById('news-image').value;
+            const preview = document.getElementById('news-img-preview');
+            if (url) {
+                preview.style.display = 'block';
+                preview.querySelector('img').src = url;
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        function formatDoc(cmd, value = null) {
+            document.execCommand(cmd, false, value);
+        }
+
+        function clearArticleForm() {
+            document.getElementById('news-title').value = '';
+            document.getElementById('news-author').value = '';
+            document.getElementById('news-image').value = '';
+            document.getElementById('news-tag').value = '';
+            document.getElementById('news-content').innerHTML = '';
+            document.getElementById('news-featured').checked = false;
+            document.getElementById('news-img-preview').style.display = 'none';
         }
 
         // ... (Scores Logic remains) ...
@@ -293,34 +513,42 @@
         // ... (Roster Logic remains) ...
 
         async function saveRoster() {
-            console.log("DEBUG: saveRoster v1.2 FIXED executed");
             const team = document.getElementById('admin-roster-team').value;
-            // Ensure currentRosterMembers is defined; if not, try to recover or error gracefully
-            if (typeof currentRosterMembers === 'undefined') {
-                console.error("currentRosterMembers is undefined. Roster editor might not be loaded.");
-                alert("Error: Roster data not loaded properly.");
-                return;
-            }
-            rosterData[team] = currentRosterMembers;
+            if (!team) return alert("Please select a team.");
+
+            // Confirm
+            if (!confirm(`Save roster changes for ${team}?`)) return;
+
+            console.log(`DEBUG: Saving Roster for ${team}`, currentRosterMembers);
 
             // API Save or Fallback
             try {
+                // Send specific team update instead of global state
+                const payload = {
+                    team: team,
+                    players: currentRosterMembers
+                };
+
                 const res = await fetch('/.netlify/functions/save-roster', {
                     method: 'POST',
-                    body: JSON.stringify(rosterData),
+                    body: JSON.stringify(payload),
                     headers: { 'Content-Type': 'application/json' }
                 });
 
                 if (!res.ok) {
-                    // Throw distinct error to trigger fallback
-                    throw new Error("API_UNAVAILABLE: " + res.status);
+                    const txt = await res.text();
+                    throw new Error("API Error: " + txt);
                 }
 
-                alert(`${team} Roster Saved!`);
+                const json = await res.json();
+                console.log("Server Response:", json);
+
+                alert(`${team} Roster Saved! (${json.count} players persisted)`);
             } catch (e) {
-                console.warn("API Unavailable or Error, saving to Local Storage (Dev Mode). Details:", e);
+                console.warn("API Unavailable/Error:", e);
+                rosterData[team] = currentRosterMembers;
                 localStorage.setItem('pec_rosters', JSON.stringify(rosterData));
-                alert(`${team} Roster Saved (Local Dev Mode)!`);
+                alert(`${team} Roster Saved (Local Dev Mode)! Error: ${e.message}`);
             }
         }
 
@@ -337,9 +565,7 @@
             }
 
             let matches = weekData.matches;
-            // Filter out BYES for reporting
             matches = matches.filter(m => m.teamB !== 'BYE');
-
             if (gameFilter !== 'all') {
                 matches = matches.filter(m => m.game === gameFilter);
             }
@@ -347,74 +573,19 @@
             container.innerHTML = matches.map(m => {
                 const reportId = `${week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '');
                 const report = matchReports[reportId] || {};
-                const scoreA = report.scoreA || '';
-                const scoreB = report.scoreB || '';
-                const ballchasingGroupUrl = report.ballchasingGroupUrl || '';
+                const scoreA = (report.scoreA !== undefined && report.scoreA !== null) ? parseInt(report.scoreA) : '';
+                const scoreB = (report.scoreB !== undefined && report.scoreB !== null) ? parseInt(report.scoreB) : '';
 
-                // --- Rocket League Field ---
-                let specializedField = '';
-                if (m.game === 'Rocket League') {
-                    specializedField = `
-                    <div style="margin-bottom:1rem; border:1px solid #334155; padding:1rem; border-radius:4px;">
-                        <label style="font-size:0.9rem; color:#4ade80; display:block; margin-bottom:0.5rem; font-weight:bold;">Rocket League Automation</label>
-                        <div style="display:flex; flex-direction:column; gap:0.2rem; background:rgba(255,255,255,0.05); padding:0.5rem; border-radius:4px;">
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="text" class="form-control" id="rep-rl-group-${reportId}" 
-                                    value="${ballchasingGroupUrl}" 
-                                    placeholder="Paste Ballchasing Group URL" 
-                                    style="flex:1; font-size:0.85rem;">
-                            </div>
-                            <div style="font-size:0.7rem; color:#64748b; margin-left:2px;">
-                                ${ballchasingGroupUrl ? `<a href="${ballchasingGroupUrl}" target="_blank" style="color:#4ade80;">View Group</a>` : 'Paste group link to auto-fetch aggregate stats'}
-                            </div>
-                        </div>
-                         <button class="btn btn-outline" style="margin-top:1rem; width:100%" onclick="fetchBallchasingStats('${reportId}', '${m.teamA}', '${m.teamB}')">Fetch Group Stats</button>
-                    </div>`;
+                // Determine initial game count
+                // If saved report has games, use that count. Else use Score sum. Else 1.
+                let gameCount = 1;
+                if (report.games) {
+                    gameCount = Object.keys(report.games).length;
+                } else if (scoreA !== '' && scoreB !== '') {
+                    gameCount = Math.max(1, (parseInt(scoreA) + parseInt(scoreB)));
                 }
 
-                // --- Valorant Field ---
-                if (m.game === 'Valorant') {
-                    specializedField = `
-                    <div style="margin-bottom:1rem; border:1px solid #334155; padding:1rem; border-radius:4px;">
-                        <label style="font-size:0.9rem; color:#f43f5e; display:block; margin-bottom:0.5rem; font-weight:bold;">Valorant Match Reporting</label>
-                        
-                        <div id="val-games-container-${reportId}">
-                             <!-- Placeholder for Game 1, 2, 3 inputs could go here, or we treat it as 1-3 fixed -->
-                             <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem;">Paste a screenshot of the scoreboard (Win+Shift+S, then Ctrl+V) into the box below for each game.</p>
-                             
-                             ${[1, 2, 3].map(i => `
-                                <div class="val-game-row" style="background:rgba(0,0,0,0.2); padding:0.5rem; margin-bottom:0.5rem; border-radius:4px;">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                                        <span style="font-weight:bold; font-size:0.85rem;">Game ${i}</span>
-                                        <select class="form-control" style="width:120px; font-size:0.8rem;" id="val-winner-${reportId}-${i}">
-                                            <option value="">Select Winner</option>
-                                            <option value="${m.teamA}" ${(report.games && report.games[i] && report.games[i].winner === m.teamA) ? 'selected' : ''}>${m.teamA}</option>
-                                            <option value="${m.teamB}" ${(report.games && report.games[i] && report.games[i].winner === m.teamB) ? 'selected' : ''}>${m.teamB}</option>
-                                        </select>
-                                    </div>
-                                    <div class="paste-zone" id="paste-zone-${reportId}-${i}" 
-                                         contenteditable="true" 
-                                         style="border:1px dashed #475569; padding:1rem; min-height:40px; font-size:0.8rem; color:#94a3b8; text-align:center; cursor:text;"
-                                         onpaste="handlePaste(event, '${reportId}', ${i})"
-                                    >Click & Paste Screenshot Here</div>
-                                    <div id="paste-preview-${reportId}-${i}" style="margin-top:0.5rem; display:none;">
-                                        <img style="max-width:100%; border-radius:4px; max-height:100px; object-fit:cover;">
-                                        <button class="btn btn-sm btn-outline" style="width:100%; margin-top:0.2rem;" onclick="processValorantImage('${reportId}', ${i})">Auto-Fill Stats</button>
-                                    </div>
-                                    
-                                    <!-- Game Stats (Per Game) -->
-                                    <div style="margin-top:1rem; border-top:1px dashed #334155; padding-top:0.5rem;">
-                                        ${renderPlayerStatsInputs(m.teamA, m.game, reportId, (report.games && report.games[i] && report.games[i].stats) || {}, i)}
-                                        ${renderPlayerStatsInputs(m.teamB, m.game, reportId, (report.games && report.games[i] && report.games[i].stats) || {}, i)}
-                                    </div>
-                                </div>
-                             `).join('')}
-                        </div>
-                        
-                        <button class="btn btn-outline" style="width:100%; margin-top:0.5rem;" onclick="calcValorantSeries('${reportId}')">Update Series Score</button>
-                    </div>`;
-                }
-
+                // Render Tabs Container
                 return `
                     <div class="editor-card" style="border-left: 4px solid var(--accent-blue);">
                         <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleReport('${reportId}')">
@@ -429,188 +600,251 @@
 
                         <div id="report-details-${reportId}" style="display:none; margin-top:1rem; border-top:1px solid #334155; padding-top:1rem;">
                             
-                            ${specializedField}
-
                             <h4 style="color:white; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Match Score (Series)</h4>
                             <div style="display:flex; align-items:center; justify-content:center; gap:2rem; margin-bottom:1.5rem;">
                                 <div style="flex:1; text-align:center;">
                                     <label>${m.teamA}</label>
-                                    <input type="number" class="form-control" style="text-align:center; font-size:1.5rem;" id="rep-scoreA-${reportId}" value="${scoreA}">
+                                    <input type="number" class="form-control" style="text-align:center; font-size:1.5rem;" 
+                                        id="rep-scoreA-${reportId}" value="${scoreA}" 
+                                        onchange="updateGameTabs('${reportId}', '${m.teamA}', '${m.teamB}', '${m.game}')">
                                 </div>
                                 <span style="font-size:1.5rem; font-weight:bold;">-</span>
                                 <div style="flex:1; text-align:center;">
                                     <label>${m.teamB}</label>
-                                    <input type="number" class="form-control" style="text-align:center; font-size:1.5rem;" id="rep-scoreB-${reportId}" value="${scoreB}">
+                                    <input type="number" class="form-control" style="text-align:center; font-size:1.5rem;" 
+                                        id="rep-scoreB-${reportId}" value="${scoreB}"
+                                        onchange="updateGameTabs('${reportId}', '${m.teamA}', '${m.teamB}', '${m.game}')">
                                 </div>
                             </div>
 
-                            ${m.game !== 'Valorant' ? `
-                            <h4 style="color:white; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Aggregate Player Stats</h4>
-                            
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-                                ${renderPlayerStatsInputs(m.teamA, m.game, reportId, report.stats || {})}
-                                ${renderPlayerStatsInputs(m.teamB, m.game, reportId, report.stats || {})}
+                            <!-- Dynamic Game Tabs -->
+                            <div class="report-tabs" style="display:flex; gap:0.5rem; margin-bottom:1rem; overflow-x:auto;">
+                                <!-- Injected via JS -->
                             </div>
+                            <div id="report-games-container-${reportId}">
+                                <!-- Game Inputs -->
+                            </div>
+
+                            <!-- Ballchasing / Extra Tools -->
+                            ${m.game === 'Rocket League' ? `
+                                <div style="margin-top:2rem; padding-top:1rem; border-top:1px dashed #334155;">
+                                     <label style="font-size:0.8rem; color:#4ade80; display:block; margin-bottom:0.5rem;">Rocket League Automation</label>
+                                     <div style="display:flex; gap:0.5rem;">
+                                        <input type="text" class="form-control" id="rep-rl-group-${reportId}" placeholder="Paste Group URL">
+                                        <button class="btn btn-outline" onclick="fetchBallchasingStats('${reportId}', '${m.teamA}', '${m.teamB}')">Auto-Fill</button>
+                                     </div>
+                                </div>
                             ` : ''}
 
                             <button class="btn btn-primary" style="width:100%; margin-top:1.5rem;" onclick="saveReport('${reportId}', '${week}')">Save Report</button>
                         </div>
                     </div>
-                `}).join('');
+                `;
+            }).join('');
 
-            // Restore Images from DB (Async)
-            if (window.getImage) {
-                matches.forEach(m => {
-                    if (m.game === 'Valorant') {
-                        const reportId = `${week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '');
-                        [1, 2, 3].forEach(async i => {
-                            const blob = await getImage(`val-shot-${reportId}-${i}`);
-                            if (blob) {
-                                const img = document.querySelector(`#paste-preview-${reportId}-${i} img`);
-                                const zone = document.getElementById(`paste-zone-${reportId}-${i}`);
-                                const preview = document.getElementById(`paste-preview-${reportId}-${i}`);
-                                if (img && zone && preview) {
-                                    img.src = blob;
-                                    img.dataset.blob = blob;
-                                    zone.style.display = 'none';
-                                    preview.style.display = 'block';
-                                }
-                            }
-                        });
-                    }
-                });
-            }
+            // Init Tabs for all rendered reports
+            matches.forEach(m => {
+                const reportId = `${week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '');
+                updateGameTabs(reportId, m.teamA, m.teamB, m.game, true);
+            });
         }
+
+        // Global Helper for Tabs
+        window.updateGameTabs = (reportId, teamA, teamB, game, isInit = false) => {
+            const sA = parseInt(document.getElementById(`rep-scoreA-${reportId}`).value) || 0;
+            const sB = parseInt(document.getElementById(`rep-scoreB-${reportId}`).value) || 0;
+            let count = sA + sB;
+            if (count < 1) count = 1;
+
+            const container = document.getElementById(`report-games-container-${reportId}`);
+            const tabsContainer = container.previousElementSibling; // .report-tabs
+
+            // Get existing report data to preserve inputs if not overwriting
+            // Or if Init, load from DB
+            // Check if we already generated tabs? 
+            const existingTabs = tabsContainer.querySelectorAll('.btn-tab').length;
+
+            // If just init, we render 'count' tabs.
+            // If changed, we typically want to add/remove tabs? 
+            // For simplicity, re-render ALL if count changes, trying to preserve values if mapped.
+            // But preserving values is hard on re-render.
+            // Helper: Just hide/show?
+
+            // Ideally: Check if we need to add more.
+            // Current Approach: Re-render. (Data loss risk if typing then changing score).
+            // But changing score is usually step 1.
+
+            // If Init, load report stats.
+            // We need to fetch report object from memory `matchReports`.
+            const report = matchReports[reportId] || {};
+            const savedGames = report.games || {};
+
+            let tabsHTML = '';
+            let contentHTML = '';
+
+            for (let i = 1; i <= count; i++) {
+                const active = i === 1 ? 'active-tab' : ''; // Default to 1
+                const display = i === 1 ? 'block' : 'none';
+
+                tabsHTML += `<button class="btn btn-outline btn-tab ${active}" onclick="switchReportTab('${reportId}', ${i})" id="tab-${reportId}-${i}">Game ${i}</button>`;
+
+                // Content
+                // Pass existing stats for this game if available
+                const gStats = (savedGames[i] && savedGames[i].stats) ? savedGames[i].stats : {};
+
+                contentHTML += `
+                <div id="game-content-${reportId}-${i}" style="display:${display}">
+                    ${game === 'Valorant' ? `
+                        <!-- Val Winner Select & Paste Zone -->
+                        <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                            <select class="form-control" id="val-winner-${reportId}-${i}" style="width:200px;">
+                                <option value="">Select Winner</option>
+                                <option value="${teamA}" ${savedGames[i]?.winner === teamA ? 'selected' : ''}>${teamA}</option>
+                                <option value="${teamB}" ${savedGames[i]?.winner === teamB ? 'selected' : ''}>${teamB}</option>
+                            </select>
+                            <div class="paste-zone" contenteditable="true" style="padding:0.5rem; border:1px dashed #64748b; font-size:0.8rem; color:#94a3b8;" onpaste="handlePaste(event, '${reportId}', ${i})">Paste Scoreboard</div>
+                        </div>
+                        <div id="paste-preview-${reportId}-${i}" style="display:none; margin-bottom:1rem;">
+                            <img style="max-width:100%; max-height:100px;">
+                            <button class="btn btn-sm btn-outline" style="width:100%" onclick="processValorantImage('${reportId}', ${i})">Process</button>
+                        </div>
+                    ` : ''}
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                        ${renderPlayerStatsInputs(teamA, game, reportId, gStats, i)}
+                        ${renderPlayerStatsInputs(teamB, game, reportId, gStats, i)}
+                    </div>
+                </div>`;
+            }
+
+            tabsContainer.innerHTML = tabsHTML;
+            container.innerHTML = contentHTML;
+
+            // Restore Images if Val
+            if (window.getImage && game === 'Valorant') {
+                // ... (Async logic for images)
+            }
+        };
+
+        window.switchReportTab = (rid, idx) => {
+            // Update active tab style
+            document.querySelectorAll(`#report-details-${rid} .btn-tab`).forEach(b => {
+                b.classList.remove('active-tab');
+                b.style.background = 'transparent';
+            });
+            const activeBtn = document.getElementById(`tab-${rid}-${idx}`);
+            if (activeBtn) {
+                activeBtn.classList.add('active-tab');
+                activeBtn.style.background = 'var(--accent-blue)';
+            }
+
+            // Show content
+            const container = document.getElementById(`report-games-container-${rid}`);
+            Array.from(container.children).forEach(div => div.style.display = 'none');
+            document.getElementById(`game-content-${rid}-${idx}`).style.display = 'block';
+        };
 
 
         // --- BALLCHASING API LOGIC ---
-        const BALLCHASING_API_KEY = 'J1UM5OTMDPJsrKHtqWRLjyinwHeEJh6ilSdBRnnG';
-
         async function fetchBallchasingStats(reportId, teamA, teamB) {
-            const fetchBtn = document.querySelector(`#report - details - ${reportId} button.btn - outline`);
+            const fetchBtn = document.querySelector(`#report-details-${reportId} button.btn-outline`);
+            if (!fetchBtn) return;
             const originalText = fetchBtn.textContent;
             fetchBtn.textContent = 'Processing Group...';
             fetchBtn.disabled = true;
 
             try {
                 // 1. Get Group URL
-                const groupInput = document.getElementById(`rep - rl - group - ${reportId} `);
+                const groupInput = document.getElementById(`rep-rl-group-${reportId}`);
                 const groupUrl = groupInput ? groupInput.value.trim() : '';
-
-                if (!groupUrl) {
-                    alert('Please paste a valid Ballchasing Group URL.');
-                    return;
-                }
+                if (!groupUrl) throw new Error('Please paste a valid Ballchasing Group URL.');
 
                 // Extract Group ID
-                // Supports formats: https://ballchasing.com/group/xxxxx (with or without extra path/query)
                 const match = groupUrl.match(/\/group\/([a-zA-Z0-9-]+)/);
-                if (!match) {
-                    alert('Invalid Group URL format. Expected .../group/ID...');
-                    return;
-                }
+                if (!match) throw new Error('Invalid Group URL format.');
                 const groupId = match[1];
 
-                // 2. Fetch Group Stats
+                // 2. Fetch Group & Replays
                 fetchBtn.textContent = 'Fetching Data...';
-
-                // PROXY CHANGE: Use local/Netlify Function proxy to avoid CORS
-                const targetUrl = `https://ballchasing.com/api/groups/${groupId}`;
-                const response = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(targetUrl)}`);
-
-                if (!response.ok) throw new Error(`Fetch Error ${response.status}: ${response.statusText}`);
-                const data = await response.json();
-
-                // Fetch Replays via Proxy (needed for match history and accurate scores)
-                const replaysTargetUrl = `https://ballchasing.com/api/replays?group=${groupId}`;
+                // We need Replays List primarily
+                const replaysTargetUrl = `https://ballchasing.com/api/replays?group=${groupId}&sort-by=replay-date&sort-dir=asc`;
                 const replaysQuery = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(replaysTargetUrl)}`);
-                let replaysData = { list: [] };
-                if (replaysQuery.ok) {
-                    replaysData = await replaysQuery.json();
-                }
+                if (!replaysQuery.ok) throw new Error('Failed to fetch replays list');
 
-                // 3. Process Player Stats (Aggregated)
-                const statsMap = {};
-                const matchHistory = replaysData.list || []; // Store full history for granular display
+                const replaysData = await replaysQuery.json();
+                const replays = replaysData.list || [];
 
-                if (data.players) {
-                    data.players.forEach(p => {
-                        // Create map by name
-                        if (!statsMap[p.name]) statsMap[p.name] = { k: 0, d: 0, a: 0, s: 0, sh: 0 };
-                        // Cumulative stats in group response
-                        if (p.cumulative && p.cumulative.core) {
-                            statsMap[p.name].k = p.cumulative.core.goals;
-                            statsMap[p.name].d = p.cumulative.core.saves;
-                            statsMap[p.name].a = p.cumulative.core.assists;
-                            statsMap[p.name].s = p.cumulative.core.score;
-                            statsMap[p.name].sh = p.cumulative.core.shots;
-                        }
-                    });
-                }
+                if (replays.length === 0) throw new Error('No replays found in this group.');
 
-                // 4. Calculate Series Score (Wins)
+                // 3. Determine Scores & Game Count
                 let winsA = 0;
                 let winsB = 0;
 
-                // Use the already fetched replaysData
-                if (replaysData.list) {
-                    replaysData.list.forEach(replay => {
-                        // Fix: Access .stats property
-                        const blueGoals = replay.blue?.stats?.core?.goals || 0;
-                        const orangeGoals = replay.orange?.stats?.core?.goals || 0;
-                        const rosterA = rosterData[teamA] || [];
+                // Helper to normalize name (strip whitespace, lower)
+                const norm = n => n.toLowerCase().trim();
+                const rosterA = (rosterData[teamA] || []).map(r => norm(r.name));
 
-                        // Check which team is Blue
-                        const isBlueA = replay.blue.players.some(bp => rosterA.some(ra => ra.name.toLowerCase() === bp.name.toLowerCase()));
+                replays.forEach(replay => {
+                    const blueGoals = replay.blue?.stats?.core?.goals || 0;
+                    const orangeGoals = replay.orange?.stats?.core?.goals || 0;
 
-                        if (isBlueA) {
-                            if (blueGoals > orangeGoals) winsA++;
-                            else if (orangeGoals > blueGoals) winsB++;
-                        } else {
-                            if (orangeGoals > blueGoals) winsA++;
-                            else if (blueGoals > orangeGoals) winsB++;
-                        }
-                    });
+                    // Identify Team A color
+                    // Check intersection of Blue Players with Team A Roster
+                    const bluePlayers = replay.blue.players.map(p => norm(p.name));
+                    const isBlueA = bluePlayers.some(bp => rosterA.includes(bp));
 
-                    // Update Score Inputs
-                    document.getElementById(`rep-scoreA-${reportId}`).value = winsA;
-                    document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
-                }
-
-
-                // Update DOM (Player Stats)
-                Object.keys(statsMap).forEach(playerName => {
-                    let row = document.querySelector(`#report-details-${reportId} .stat-row-input[data-player="${playerName}"]`);
-                    if (!row) {
-                        const allRows = document.querySelectorAll(`#report-details-${reportId} .stat-row-input`);
-                        for (const r of allRows) {
-                            if (r.dataset.player.toLowerCase() === playerName.toLowerCase()) {
-                                row = r;
-                                break;
-                            }
-                        }
-                    }
-                    if (row) {
-                        row.querySelector('[data-stat="k"]').value = statsMap[playerName].k;
-                        row.querySelector('[data-stat="d"]').value = statsMap[playerName].d;
-                        row.querySelector('[data-stat="a"]').value = statsMap[playerName].a;
-                        row.querySelector('[data-stat="s"]').value = statsMap[playerName].s;
-                        row.querySelector('[data-stat="sh"]').value = statsMap[playerName].sh;
+                    if (isBlueA) {
+                        if (blueGoals > orangeGoals) winsA++;
+                        else if (orangeGoals > blueGoals) winsB++;
+                    } else {
+                        if (orangeGoals > blueGoals) winsA++;
+                        else if (blueGoals > orangeGoals) winsB++;
                     }
                 });
 
-                // Store history temporarily in DOM or global map? 
-                // Let's store in a hidden input or dataset to grab later during Save?
-                // Or just attach to the global matchReports temporarily?
-                // Best to attach to DOM or use a global stash.
-                if (!window.tempMatchHistory) window.tempMatchHistory = {};
-                window.tempMatchHistory[reportId] = matchHistory;
+                // Update Scores
+                document.getElementById(`rep-scoreA-${reportId}`).value = winsA;
+                document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
 
-                alert('Group Stats & Score Populated! matches found: ' + (winsA + winsB));
+                // 4. Update Game Tabs
+                // We must update tabs to match replay count
+                window.updateGameTabs(reportId, teamA, teamB, 'Rocket League');
 
-            } catch (err) {
-                console.error(err);
-                alert('Error: ' + err.message);
+                // 5. Fill Stats Per Game
+                replays.forEach((replay, idx) => {
+                    const gameIdx = idx + 1;
+                    const container = document.getElementById(`game-content-${reportId}-${gameIdx}`);
+                    if (!container) return; // Tab didn't generate?
+
+                    // Combine Blue and Orange players
+                    const allPlayers = [...replay.blue.players, ...replay.orange.players];
+
+                    allPlayers.forEach(p => {
+                        const pName = p.name;
+                        const pStats = p.stats.core;
+
+                        const rows = container.querySelectorAll('.stat-row-input');
+                        let targetRow = null;
+
+                        rows.forEach(r => {
+                            if (norm(r.dataset.player) === norm(pName)) targetRow = r;
+                        });
+
+                        if (targetRow) {
+                            targetRow.querySelector('[data-stat="k"]').value = pStats.goals;
+                            targetRow.querySelector('[data-stat="d"]').value = pStats.saves;
+                            targetRow.querySelector('[data-stat="a"]').value = pStats.assists;
+                            targetRow.querySelector('[data-stat="s"]').value = pStats.score;
+                            targetRow.querySelector('[data-stat="sh"]').value = pStats.shots;
+                        }
+                    });
+                });
+
+                alert(`Successfully processed ${replays.length} replays!`);
+
+            } catch (e) {
+                console.error(e);
+                alert("Error: " + e.message);
             } finally {
                 fetchBtn.textContent = originalText;
                 fetchBtn.disabled = false;
@@ -682,7 +916,7 @@
                     ${roster.map(p => {
                 const currentStats = stats[p.name] || { k: 0, d: 0, a: 0, s: 0, sh: 0 };
                 return `
-                        <div class="stat-row-input" data-player="${p.name}" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; font-size:0.9rem;">
+                        <div class="stat-row-input" data-game="${gameIdx || 'total'}" data-player="${p.name}" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; font-size:0.9rem;">
                             <span style="width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</span>
                             <div style="display:flex; gap:0.2rem;">
                                 <input data-stat="s" placeholder="Pts" title="Score" class="form-control" style="width:40px; padding:0.2em; text-align:center;" value="${currentStats.s || 0}">
@@ -911,14 +1145,20 @@
             const ballchasingGroupUrl = groupInput ? groupInput.value.trim() : '';
 
             const card = document.getElementById(`report-details-${reportId}`);
+            // Find all game inputs
             const statRows = card.querySelectorAll('.stat-row-input');
 
             // Data Containers
             const stats = {};
-            const games = {}; // Per-Game { 1: { winner: '...', stats: {} } }
+            const games = {};
 
-            // 1. Capture Game Winners (Valorant)
-            for (let i = 1; i <= 3; i++) {
+            // 1. Capture Game Winners & Inputs
+            // We scan the DOM for game tabs to see how many games we have
+            const gameTabs = card.querySelectorAll('.btn-tab');
+            const gameCount = gameTabs.length || (parseInt(scoreA) + parseInt(scoreB)) || 1;
+
+            for (let i = 1; i <= gameCount; i++) {
+                // Check Valid Winner Select (Val only usually)
                 const winSel = document.getElementById(`val-winner-${reportId}-${i}`);
                 if (winSel) {
                     if (!games[i]) games[i] = { stats: {} };
@@ -929,7 +1169,7 @@
             // 2. Process Rows
             statRows.forEach(row => {
                 const player = row.dataset.player;
-                const gameIdx = row.dataset.game;
+                const gameIdx = row.dataset.game; // '1', '2' or 'total'
 
                 const inputs = row.querySelectorAll('input[data-stat]');
                 const pStats = {};
@@ -938,68 +1178,88 @@
                 });
 
                 if (gameIdx && gameIdx !== 'total') {
-                    // --- PER GAME STATS (Valorant) ---
+                    // --- PER GAME STATS ---
                     if (!games[gameIdx]) games[gameIdx] = { stats: {} };
-                    if (!games[gameIdx].stats) games[gameIdx].stats = {};
                     games[gameIdx].stats[player] = pStats;
 
                     // Aggregate Logic
-                    if (!stats[player]) stats[player] = { k: 0, d: 0, a: 0, acs: 0, econ: 0, fb: 0, pl: 0, df: 0, maps: 0, s: 0 };
+                    // Initialize player stats if not exists
+                    if (!stats[player]) stats[player] = { k: 0, d: 0, a: 0, s: 0, sh: 0, acs: 0, econ: 0, fb: 0, pl: 0, df: 0, maps: 0 };
 
                     const cur = stats[player];
                     cur.k += parseInt(pStats.k || 0);
                     cur.d += parseInt(pStats.d || 0);
                     cur.a += parseInt(pStats.a || 0);
+
+                    // General Stats
+                    cur.s += parseInt(pStats.s || 0);
+                    cur.sh += parseInt(pStats.sh || 0);
+
+                    // Val Specific
                     cur.fb += parseInt(pStats.fb || 0);
                     cur.pl += parseInt(pStats.pl || 0);
                     cur.df += parseInt(pStats.df || 0);
-
                     cur.acs += parseInt(pStats.acs || 0);
                     cur.econ += parseInt(pStats.econ || 0);
+
                     cur.maps += 1;
 
-                    if (pStats.agent) cur.agent = pStats.agent;
+                    if (pStats.agent) cur.agent = pStats.agent; // Last agent played?
                 } else {
-                    stats[player] = pStats;
+                    // Legacy 'total' stats if we ever fall back
+                    if (!stats[player]) stats[player] = pStats;
                 }
             });
 
-            // 3. Finalize Averages (Valorant)
+            // 3. Finalize Averages (Valorant) & Totals
+            // For RL/OW, we usually display totals. For Val, avg ACS/Econ.
             Object.keys(stats).forEach(p => {
                 if (stats[p].maps > 0) {
-                    stats[p].acs = Math.round(stats[p].acs / stats[p].maps);
-                    stats[p].econ = Math.round(stats[p].econ / stats[p].maps);
-                    stats[p].s = stats[p].acs;
+                    // Valorant Average Logic
+                    if (stats[p].acs > 0 || stats[p].econ > 0) {
+                        stats[p].acs = Math.round(stats[p].acs / stats[p].maps);
+                        stats[p].econ = Math.round(stats[p].econ / stats[p].maps);
+                        // For Val, Score 's' is usually mapped to ACS for sorting
+                        stats[p].s = stats[p].acs;
+                    }
+                    // For RL, we might want Total Score, so we leave 's' as sum.
                 }
             });
 
-            // 4. Generate Match History for Public Site (Valorant)
-            let matchHistory = (window.tempMatchHistory && window.tempMatchHistory[reportId]) ? window.tempMatchHistory[reportId] : null;
-
-            // If Valorant (games detected), generate matchHistory manually
+            // 4. Generate Match History Arrays
+            let matchHistory = [];
             if (Object.keys(games).length > 0) {
-                matchHistory = [];
-                for (let i = 1; i <= 3; i++) {
-                    if (games[i] && games[i].stats && Object.keys(games[i].stats).length > 0) {
-                        const replay = { blue: { players: [] }, orange: { players: [] } };
-                        Object.keys(games[i].stats).forEach(pName => {
-                            const pStat = games[i].stats[pName];
+                Object.keys(games).forEach(gIdx => {
+                    const g = games[gIdx];
+                    if (g.stats && Object.keys(g.stats).length > 0) {
+                        const replay = { blue: { players: [] }, orange: { players: [] } }; // Mock
+
+                        Object.keys(g.stats).forEach(pName => {
+                            const pStat = g.stats[pName];
+                            // Unified Player Object
                             const playerObj = {
                                 name: pName,
-                                stats: { core: { score: pStat.acs, k: pStat.k } },
-                                valorant: pStat
+                                stats: { core: { score: pStat.acs || pStat.s || 0, k: pStat.k, d: pStat.d, a: pStat.a }, valorant: pStat }
                             };
                             replay.blue.players.push(playerObj);
                         });
                         matchHistory.push(replay);
                     }
-                }
-            } else if (!matchHistory) {
-                const existingRep = matchReports[reportId];
-                if (existingRep && existingRep.matchHistory) {
-                    matchHistory = existingRep.matchHistory;
-                }
+                });
+            } else if (window.tempMatchHistory && window.tempMatchHistory[reportId]) {
+                matchHistory = window.tempMatchHistory[reportId];
+            } else {
+                // Fallback
+                const replay = { blue: { players: [] }, orange: { players: [] } };
+                Object.keys(stats).forEach(pName => {
+                    replay.blue.players.push({ name: pName, stats: { core: stats[pName] } });
+                });
+                matchHistory.push(replay);
             }
+
+            // Map matchHistory to object 1..N if array
+            const matchHistoryMap = {};
+            matchHistory.forEach((m, idx) => matchHistoryMap[idx + 1] = m);
 
             // Reconstruct Match Object for API
             const weekData = scheduleData.find(w => w.week == week);
@@ -1026,7 +1286,12 @@
                 scoreB: parseInt(scoreB) || 0,
                 status: (scoreA !== '' && scoreB !== '') ? 'FINAL' : 'SCHEDULED',
                 reportData: {
-                    scoreA, scoreB, ballchasingGroupUrl, stats, games, matchHistory
+                    scoreA: parseInt(scoreA) || 0,
+                    scoreB: parseInt(scoreB) || 0,
+                    ballchasingGroupUrl,
+                    stats,
+                    games,
+                    matchHistory: matchHistoryMap
                 }
             };
 
@@ -1452,18 +1717,24 @@
         function renderRosterList() {
             const container = document.getElementById('roster-editor-list');
             const filter = document.getElementById('admin-roster-game-filter').value;
-
             const games = ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'];
 
             container.innerHTML = currentRosterMembers.map((p, i) => {
                 if (filter !== 'all' && p.game !== filter) return '';
 
                 return `
-                <div class="editor-card" style="display:flex; gap:1rem; align-items:center;">
+                <div class="editor-card" style="display:grid; grid-template-columns: 100px 2fr 1.5fr 1.5fr auto; gap:0.5rem; align-items:center;">
+                    
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <input type="file" accept="image/*" style="font-size:0.7rem; width:100%" onchange="processAvatar(this, ${i})">
+                        <img id="avatar-preview-${i}" src="${p.photo || ''}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; margin-top:5px; background:#1e1b4b; ${!p.photo ? 'display:none' : ''}">
+                    </div>
+
                     <input class="form-control" value="${p.name}" placeholder="Player Name" onchange="updateRosterMember(${i}, 'name', this.value)">
                     <select class="form-control" onchange="updateRosterMember(${i}, 'game', this.value)">
                         ${games.map(g => `<option value="${g}" ${p.game === g ? 'selected' : ''}>${g}</option>`).join('')}
                     </select>
+                    
                     <input class="form-control" value="${p.role}" placeholder="Role" onchange="updateRosterMember(${i}, 'role', this.value)">
                     <button class="btn btn-outline" onclick="removeRosterMember(${i})" style="color:red; border-color:red;">X</button>
                 </div>
@@ -1472,14 +1743,12 @@
 
         function updateRosterMember(index, field, value) {
             currentRosterMembers[index][field] = value;
-            // If we filter, re-render? No, it might jump. That is fine.
         }
 
         function addPlayerRow() {
             const filter = document.getElementById('admin-roster-game-filter').value;
             const defaultGame = filter === 'all' ? 'Rocket League' : filter;
-
-            currentRosterMembers.push({ name: '', game: defaultGame, role: '' });
+            currentRosterMembers.push({ name: '', game: defaultGame, role: '', photo: '' });
             renderRosterList();
         }
 
@@ -1488,9 +1757,74 @@
             renderRosterList();
         }
 
+        // --- CROPPER LOGIC ---
+        let cropper;
+        let currentCropIndex = null;
+        let currentCropInput = null;
 
+        async function processAvatar(input, index) {
+            const file = input.files[0];
+            if (!file) return;
 
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function (e) {
+                // Open Modal
+                const modal = document.getElementById('crop-modal');
+                const image = document.getElementById('crop-image-source');
 
+                image.src = e.target.result;
+                modal.style.display = 'flex';
+                currentCropIndex = index;
+                currentCropInput = input;
+
+                // Init Cropper
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(image, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 0.8,
+                });
+            };
+        }
+
+        function closeCropModal() {
+            const modal = document.getElementById('crop-modal');
+            modal.style.display = 'none';
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            // Reset input so change event fires again if same file selected
+            if (currentCropInput) currentCropInput.value = '';
+        }
+
+        function saveCrop() {
+            if (!cropper) return;
+
+            // Get Cropped Canvas (Resize to 300x300)
+            const canvas = cropper.getCroppedCanvas({
+                width: 300,
+                height: 300,
+                imageSmoothingQuality: 'high'
+            });
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+            // Update State
+            if (currentCropIndex !== null) {
+                currentRosterMembers[currentCropIndex].photo = dataUrl;
+
+                // Update Preview in Grid
+                const preview = document.getElementById(`avatar-preview-${currentCropIndex}`);
+                if (preview) {
+                    preview.src = dataUrl;
+                    preview.style.display = 'block';
+                }
+            }
+
+            closeCropModal();
+        }
     </script>
     <script>
         // --- IMAGE PERSISTENCE (IndexedDB) ---
@@ -1544,6 +1878,19 @@
         // Initialize DB
         initDB();
     </script>
+    <!-- Crop Modal -->
+    <div id="crop-modal" class="crop-modal-overlay">
+        <div class="crop-container">
+            <h3 style="color:white; margin:0;">Adjust Profile Picture</h3>
+            <div class="crop-image-wrapper">
+                <img id="crop-image-source" src="" alt="Crop Source">
+            </div>
+            <div class="crop-actions">
+                <button class="btn btn-outline" onclick="closeCropModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCrop()">Save Photo</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
