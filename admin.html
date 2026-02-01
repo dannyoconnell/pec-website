@@ -169,6 +169,7 @@
 
         <div class="admin-grid">
             <aside class="admin-sidebar">
+                <div class="admin-nav-item" onclick="switchTab('settings')">Global Settings</div>
                 <div class="admin-nav-item active" onclick="switchTab('scores')">Live Ticker & Scores</div>
                 <div class="admin-nav-item" onclick="switchTab('schedule')">Schedule Editor</div>
                 <div class="admin-nav-item" onclick="switchTab('roster')">Roster Editor</div>
@@ -178,6 +179,31 @@
             </aside>
 
             <main class="admin-content">
+                <!-- Global Settings -->
+                <div id="view-settings" style="display:none;">
+                    <h2>Global Website Settings</h2>
+                    <div class="editor-card">
+                        <div class="form-group">
+                            <label>Current Live Week (Landing Page)</label>
+                            <select id="setting-current-week" class="form-control" style="max-width:200px;">
+                                <option value="1">Week 1</option>
+                                <option value="2">Week 2</option>
+                                <option value="3">Week 3</option>
+                                <option value="4">Week 4</option>
+                                <option value="5">Week 5</option>
+                                <option value="6">Week 6</option>
+                                <option value="7">Week 7</option>
+                                <option value="8">Week 8</option>
+                                <option value="9">Week 9</option>
+                            </select>
+                            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">
+                                This controls which week's games are shown on the home page ticker and schedule summary.
+                            </p>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveGlobalSettings()">Save Settings</button>
+                    </div>
+                </div>
+
                 <!-- Scores Editor -->
                 <div id="view-scores">
                     <h2>Manage Ticker Scores</h2>
@@ -363,8 +389,32 @@
             document.getElementById(`view-${tab}`).style.display = 'block';
         }
 
+        // --- GLOBAL SETTINGS LOGIC ---
+        function loadGlobalSettings() {
+            try {
+                const settings = JSON.parse(localStorage.getItem('pec_settings') || '{}');
+                const week = settings.currentWeek || 1;
+                document.getElementById('setting-current-week').value = week;
+            } catch (e) {
+                console.warn("Error loading settings", e);
+            }
+        }
+
+        function saveGlobalSettings() {
+            const week = document.getElementById('setting-current-week').value;
+            try {
+                const settings = JSON.parse(localStorage.getItem('pec_settings') || '{}');
+                settings.currentWeek = week;
+                localStorage.setItem('pec_settings', JSON.stringify(settings));
+                alert(`Global Settings Saved! Landing Page set to Week ${week}.`);
+            } catch (e) {
+                alert('Error saving settings');
+            }
+        }
+
         // --- SCORES LOGIC ---
         function initAdmin() {
+            loadGlobalSettings();
             renderScoresEditor();
             loadScheduleEditor();
             initRosterDropdown();
@@ -552,6 +602,143 @@
             }
         }
 
+        // --- GLOBAL SMASH HELPERS ---
+        const smashChars = ["Mario", "Donkey Kong", "Link", "Samus", "Dark Samus", "Yoshi", "Kirby", "Fox", "Pikachu", "Luigi", "Ness", "Captain Falcon", "Jigglypuff", "Peach", "Daisy", "Bowser", "Ice Climbers", "Sheik", "Zelda", "Dr. Mario", "Pichu", "Falco", "Marth", "Lucina", "Young Link", "Ganondorf", "Mewtwo", "Roy", "Chrom", "Mr. Game & Watch", "Meta Knight", "Pit", "Dark Pit", "Zero Suit Samus", "Wario", "Snake", "Ike", "Pokemon Trainer", "Diddy Kong", "Lucas", "Sonic", "King Dedede", "Olimar", "Lucario", "R.O.B.", "Toon Link", "Wolf", "Villager", "Mega Man", "Wii Fit Trainer", "Rosalina & Luma", "Little Mac", "Greninja", "Palutena", "Pac-Man", "Robin", "Shulk", "Bowser Jr.", "Duck Hunt", "Ryu", "Ken", "Cloud", "Corrin", "Bayonetta", "Inkling", "Ridley", "Simon", "Richter", "King K. Rool", "Isabelle", "Incineroar", "Piranha Plant", "Joker", "Hero", "Banjo & Kazooie", "Terry", "Byleth", "Min Min", "Steve", "Sephiroth", "Pyra/Mythra", "Kazuya", "Sora", "Mii Brawler", "Mii Swordfighter", "Mii Gunner", "Random"];
+
+        window.updateSmashRoster = function (selectEl, reportId, i, side) {
+            const teamName = selectEl.value;
+            const players = rosterData[teamName] || [];
+
+            // Iterate 1 to 5 matches for this Game Index (i)
+            for (let m = 1; m <= 5; m++) {
+                const pSelect = document.getElementById(`smash-p${side}-${reportId}-${i}-${m}`);
+                if (pSelect) {
+                    const currentVal = pSelect.value;
+                    pSelect.innerHTML = '<option value="">Select Player</option>' +
+                        players.map(p => `<option value="${p.name}" ${p.name === currentVal ? 'selected' : ''}>${p.name}</option>`).join('');
+                }
+            }
+        };
+
+        window.renderSmashScoreboard = function (teamA, teamB, reportId, savedGames, gameIdx) {
+            const saved = savedGames[gameIdx] || {};
+
+            // Retrieve Team choices (Saved or Default)
+            const tLeft = saved.teamLeft || teamA;
+            const tRight = saved.teamRight || teamB;
+
+            // Rosters
+            const rosterLeft = rosterData[tLeft] || [];
+            const rosterRight = rosterData[tRight] || [];
+
+            const charOptions = smashChars.map(c => `<option value="${c}">${c}</option>`).join('');
+
+            const genPlayerOptions = (roster, selected) => {
+                return '<option value="">Select Player</option>' +
+                    roster.map(p => `<option value="${p.name}" ${p.name === selected ? 'selected' : ''}>${p.name}</option>`).join('');
+            }
+
+            // Match Rows
+            // Matches 1, 2, 3, 4, 5 (Tiebreaker)
+            const matchLabels = ["BLINDS (#1)", "#4", "#5", "#7", "Tiebreaker"];
+            const matchLabelsRight = ["#2", "#3", "#6", "BLINDS (#1)", "Tiebreaker"];
+
+            let rowsHTML = '';
+            for (let m = 1; m <= 5; m++) {
+                const mu = (saved.smash_matchups && saved.smash_matchups[m - 1]) ? saved.smash_matchups[m - 1] : {};
+
+                const pAVal = mu.pA || '';
+                const cAVal = mu.charA || '';
+                const sAVal = mu.scoreA || '';
+                const pBVal = mu.pB || '';
+                const cBVal = mu.charB || '';
+                const sBVal = mu.scoreB || '';
+
+                const label = (m === 5) ? 'TIEBREAKER' : `Match ${m}`;
+                const pickL = (m <= 5) ? matchLabels[m - 1] : '';
+                const pickR = (m <= 5) ? matchLabelsRight[m - 1] : '';
+
+                // ID Format: smash-pA-{reportId}-{gameIdx}-{matchNum}
+                rowsHTML += `
+                 <tr style="background: rgba(255,255,255,0.02);">
+                    <td style="color:#ef4444; font-size:0.8rem; vertical-align:middle;">${pickL}</td>
+                    <td>
+                        <select id="smash-pA-${reportId}-${gameIdx}-${m}" class="form-control" style="font-size:0.9rem;">
+                             ${genPlayerOptions(rosterLeft, pAVal)}
+                        </select>
+                    </td>
+                    <td>
+                         <select id="smash-cA-${reportId}-${gameIdx}-${m}" class="form-control" style="font-size:0.8rem; width:120px;">
+                            <option value="">Char</option>
+                            ${smashChars.map(c => `<option value="${c}" ${c === cAVal ? 'selected' : ''}>${c}</option>`).join('')}
+                         </select>
+                    </td>
+                    <td><input type="number" id="smash-sA-${reportId}-${gameIdx}-${m}" class="form-control" style="width:60px; text-align:center;" value="${sAVal}" placeholder="Pts"></td>
+                    
+                    <td style="font-weight:bold; vertical-align:middle;">${label}</td>
+                    
+                    <td><input type="number" id="smash-sB-${reportId}-${gameIdx}-${m}" class="form-control" style="width:60px; text-align:center;" value="${sBVal}" placeholder="Pts"></td>
+                    <td>
+                         <select id="smash-cB-${reportId}-${gameIdx}-${m}" class="form-control" style="font-size:0.8rem; width:120px;">
+                            <option value="">Char</option>
+                            ${smashChars.map(c => `<option value="${c}" ${c === cBVal ? 'selected' : ''}>${c}</option>`).join('')}
+                         </select>
+                    </td>
+                    <td>
+                        <select id="smash-pB-${reportId}-${gameIdx}-${m}" class="form-control" style="font-size:0.9rem;">
+                             ${genPlayerOptions(rosterRight, pBVal)}
+                        </select>
+                    </td>
+                    <td style="color:#ef4444; font-size:0.8rem; vertical-align:middle;">${pickR}</td>
+                 </tr>
+                 `;
+            }
+
+            return `
+                 <div class="editor-card" style="border:none; padding:0;">
+                     <!-- Team Select Headers -->
+                     <div style="display:flex; justify-content:space-between; margin-bottom:1rem; gap:2rem;">
+                         <div style="flex:1;">
+                             <label style="font-size:0.8rem; color:#94a3b8;">TEAM A (Left)</label>
+                             <select id="smash-team-left-${reportId}-${gameIdx}" class="form-control" onchange="updateSmashRoster(this, '${reportId}', ${gameIdx}, 'A')">
+                                 <option value="${teamA}" ${tLeft === teamA ? 'selected' : ''}>${teamA}</option>
+                                 <option value="${teamB}" ${tLeft === teamB ? 'selected' : ''}>${teamB}</option>
+                             </select>
+                         </div>
+                         <div style="flex:1; text-align:right;">
+                             <label style="font-size:0.8rem; color:#94a3b8;">TEAM B (Right)</label>
+                             <select id="smash-team-right-${reportId}-${gameIdx}" class="form-control" onchange="updateSmashRoster(this, '${reportId}', ${gameIdx}, 'B')">
+                                 <option value="${teamB}" ${tRight === teamB ? 'selected' : ''}>${teamB}</option>
+                                 <option value="${teamA}" ${tRight === teamA ? 'selected' : ''}>${teamA}</option>
+                             </select>
+                         </div>
+                     </div>
+
+                     <!-- Table -->
+                     <table style="width:100%; text-align:center; border-collapse:collapse;">
+                         <thead style="background:rgba(255,255,255,0.05); border-bottom:1px solid #334155;">
+                             <tr>
+                                 <th style="padding:0.5rem; width:50px;">Order</th>
+                                 <th style="padding:0.5rem;">Player</th>
+                                 <th style="padding:0.5rem;">Character</th>
+                                 <th style="padding:0.5rem;">Pts</th>
+                                 <th style="padding:0.5rem; width:100px;"></th>
+                                 <th style="padding:0.5rem;">Pts</th>
+                                 <th style="padding:0.5rem;">Character</th>
+                                 <th style="padding:0.5rem;">Player</th>
+                                 <th style="padding:0.5rem; width:50px;">Order</th>
+                             </tr>
+                         </thead>
+                         <tbody>
+                             ${rowsHTML}
+                         </tbody>
+                     </table>
+                     
+                     <p style="margin-top:0.5rem; color:#94a3b8; font-size:0.8rem;">* Enter "Points" (Stocks Taken). Tiebreaker row optional.</p>
+                 </div>
+             `;
+        };
+
         // --- MATCH REPORT LOGIC ---
         function loadReports() {
             const week = parseInt(document.getElementById('report-week-select').value);
@@ -563,7 +750,8 @@
                 container.innerHTML = '<p class="text-muted">No matches found for this week.</p>';
                 return;
             }
-
+            // Global Vars
+            let matchReports = {};
             let matches = weekData.matches;
             matches = matches.filter(m => m.teamB !== 'BYE');
             if (gameFilter !== 'all') {
@@ -587,7 +775,7 @@
 
                 // Render Tabs Container
                 return `
-                    <div class="editor-card" style="border-left: 4px solid var(--accent-blue);">
+                    <div class="editor-card" style="border-left: 4px solid var(--accent-blue); max-width: 1200px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleReport('${reportId}')">
                             <div>
                                 <div style="font-weight:bold; font-size:1.1rem;">${m.teamA} vs ${m.teamB}</div>
@@ -636,7 +824,7 @@
                                 </div>
                             ` : ''}
 
-                            <button class="btn btn-primary" style="width:100%; margin-top:1.5rem;" onclick="saveReport('${reportId}', '${week}')">Save Report</button>
+                            <button class="btn btn-primary" style="width:100%; margin-top:1.5rem;" onclick="saveReport('${reportId}', '${week}', '${m.game}')">Save Report</button>
                         </div>
                     </div>
                 `;
@@ -682,68 +870,83 @@
             let tabsHTML = '';
             let contentHTML = '';
 
-            for (let i = 1; i <= count; i++) {
-                const active = i === 1 ? 'active-tab' : ''; // Default to 1
-                const display = i === 1 ? 'block' : 'none';
+            // SMASH BROS LOOP
+            if (game === 'Smash Bros') {
+                for (let i = 1; i <= count; i++) {
+                    const active = i === 1 ? 'active-tab' : '';
+                    const display = i === 1 ? 'block' : 'none';
+                    tabsHTML += `<button class="btn btn-outline btn-tab ${active}" onclick="switchReportTab('${reportId}', ${i})" id="tab-${reportId}-${i}">Game ${i}</button>`;
 
-                tabsHTML += `<button class="btn btn-outline btn-tab ${active}" onclick="switchReportTab('${reportId}', ${i})" id="tab-${reportId}-${i}">Game ${i}</button>`;
+                    contentHTML += `
+                    <div id="game-content-${reportId}-${i}" style="display:${display}">
+                        ${renderSmashScoreboard(teamA, teamB, reportId, savedGames, i)}
+                    </div>`;
+                }
+            } else {
+                // STANDARD LAYOUT (RL, VAL, OW2)
+                for (let i = 1; i <= count; i++) {
+                    const active = i === 1 ? 'active-tab' : ''; // Default to 1
+                    const display = i === 1 ? 'block' : 'none';
 
-                // Content
-                // Pass existing stats for this game if available
-                const gStats = (savedGames[i] && savedGames[i].stats) ? savedGames[i].stats : {};
+                    tabsHTML += `<button class="btn btn-outline btn-tab ${active}" onclick="switchReportTab('${reportId}', ${i})" id="tab-${reportId}-${i}">Game ${i}</button>`;
 
-                // Maps Pool
-                const valMaps = ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
-                const owMaps = ['Antarctic Peninsula', 'Blizzard World', 'Busan', 'Circuit Royal', 'Colosseo', 'Dorado', 'Eichenwalde', 'Esperanca', 'Hanaoka', 'Havana', 'Hollywood', 'Ilios', 'Junkertown', 'Kings Row', 'Lijiang Tower', 'Midtown', 'Nepal', 'New Junk City', 'New Queen Street', 'Numbani', 'Oasis', 'Paraiso', 'Rialto', 'Route 66', 'Runasapi', 'Samoa', 'Shambali Monastery', 'Suravasa', 'Throne of Anubis', 'Watchpoint: Gibraltar'];
+                    // Content
+                    // Pass existing stats for this game if available
+                    const gStats = (savedGames[i] && savedGames[i].stats) ? savedGames[i].stats : {};
 
-                let gameMetaHTML = '';
-                if (game === 'Valorant' || game === 'Overwatch 2') {
-                    const maps = game === 'Valorant' ? valMaps : owMaps;
-                    // Sort maps alpha
-                    maps.sort();
+                    // Maps Pool
+                    const valMaps = ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
+                    const owMaps = ['Antarctic Peninsula', 'Blizzard World', 'Busan', 'Circuit Royal', 'Colosseo', 'Dorado', 'Eichenwalde', 'Esperanca', 'Hanaoka', 'Havana', 'Hollywood', 'Ilios', 'Junkertown', 'Kings Row', 'Lijiang Tower', 'Midtown', 'Nepal', 'New Junk City', 'New Queen Street', 'Numbani', 'Oasis', 'Paraiso', 'Rialto', 'Route 66', 'Runasapi', 'Samoa', 'Shambali Monastery', 'Suravasa', 'Throne of Anubis', 'Watchpoint: Gibraltar'];
 
-                    gameMetaHTML = `
-                        <div style="display:flex; gap:1rem; margin-bottom:1rem; align-items:flex-end;">
-                           <div style="flex:1;">
-                                <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Map</label>
-                                <select class="form-control" id="game-map-${reportId}-${i}" style="width:100%;">
-                                    <option value="">Select Map</option>
-                                    ${maps.map(m => `<option value="${m}" ${savedGames[i]?.map === m ? 'selected' : ''}>${m}</option>`).join('')}
-                                </select>
-                           </div>
-                           ${(game === 'Valorant' || game === 'Overwatch 2') ? `
+                    let gameMetaHTML = '';
+                    if (game === 'Valorant' || game === 'Overwatch 2') {
+                        const maps = game === 'Valorant' ? valMaps : owMaps;
+                        // Sort maps alpha
+                        maps.sort();
+
+                        gameMetaHTML = `
+                            <div style="display:flex; gap:1rem; margin-bottom:1rem; align-items:flex-end;">
                                <div style="flex:1;">
-                                    <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Winner</label>
-                                    <select class="form-control" id="val-winner-${reportId}-${i}" style="width:100%;">
-                                        <option value="">Select Winner</option>
-                                        <option value="${teamA}" ${savedGames[i]?.winner === teamA ? 'selected' : ''}>${teamA}</option>
-                                        <option value="${teamB}" ${savedGames[i]?.winner === teamB ? 'selected' : ''}>${teamB}</option>
+                                    <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Map</label>
+                                    <select class="form-control" id="game-map-${reportId}-${i}" style="width:100%;">
+                                        <option value="">Select Map</option>
+                                        ${maps.map(m => `<option value="${m}" ${savedGames[i]?.map === m ? 'selected' : ''}>${m}</option>`).join('')}
                                     </select>
                                </div>
-                           ` : ''}
+                               ${(game === 'Valorant' || game === 'Overwatch 2') ? `
+                                   <div style="flex:1;">
+                                        <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Winner</label>
+                                        <select class="form-control" id="val-winner-${reportId}-${i}" style="width:100%;">
+                                            <option value="">Select Winner</option>
+                                            <option value="${teamA}" ${savedGames[i]?.winner === teamA ? 'selected' : ''}>${teamA}</option>
+                                            <option value="${teamB}" ${savedGames[i]?.winner === teamB ? 'selected' : ''}>${teamB}</option>
+                                        </select>
+                                   </div>
+                               ` : ''}
+                            </div>
+                        `;
+                    }
+
+                    contentHTML += `
+                    <div id="game-content-${reportId}-${i}" style="display:${display}">
+                        ${gameMetaHTML}
+                        ${game === 'Valorant' ? `
+                            <!-- Val Paste Zone -->
+                            <div style="margin-bottom:1rem;">
+                                <div class="paste-zone" contenteditable="true" style="padding:0.5rem; border:1px dashed #64748b; font-size:0.8rem; color:#94a3b8;" onpaste="handlePaste(event, '${reportId}', ${i})">Paste Scoreboard Image (Ctrl+V)</div>
+                            </div>
+                            <div id="paste-preview-${reportId}-${i}" style="display:none; margin-bottom:1rem;">
+                                <img style="max-width:100%; max-height:100px;">
+                                <button class="btn btn-sm btn-outline" style="width:100%" onclick="processValorantImage('${reportId}', ${i})">Process</button>
+                            </div>
+                        ` : ''}
+
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                            ${renderPlayerStatsInputs(teamA, game, reportId, gStats, i)}
+                            ${renderPlayerStatsInputs(teamB, game, reportId, gStats, i)}
                         </div>
-                    `;
+                    </div>`;
                 }
-
-                contentHTML += `
-                <div id="game-content-${reportId}-${i}" style="display:${display}">
-                    ${gameMetaHTML}
-                    ${game === 'Valorant' ? `
-                        <!-- Val Paste Zone -->
-                        <div style="margin-bottom:1rem;">
-                            <div class="paste-zone" contenteditable="true" style="padding:0.5rem; border:1px dashed #64748b; font-size:0.8rem; color:#94a3b8;" onpaste="handlePaste(event, '${reportId}', ${i})">Paste Scoreboard Image (Ctrl+V)</div>
-                        </div>
-                        <div id="paste-preview-${reportId}-${i}" style="display:none; margin-bottom:1rem;">
-                            <img style="max-width:100%; max-height:100px;">
-                            <button class="btn btn-sm btn-outline" style="width:100%" onclick="processValorantImage('${reportId}', ${i})">Process</button>
-                        </div>
-                    ` : ''}
-
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-                        ${renderPlayerStatsInputs(teamA, game, reportId, gStats, i)}
-                        ${renderPlayerStatsInputs(teamB, game, reportId, gStats, i)}
-                    </div>
-                </div>`;
             }
 
             tabsContainer.innerHTML = tabsHTML;
@@ -1240,8 +1443,12 @@
             document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
         };
 
-        async function saveReport(reportId, week) {
-            const scoreA = document.getElementById(`rep-scoreA-${reportId}`).value;
+        async function saveReport(reportId, week, gameType = '') {
+            // Validate Inputs
+            const scoreAInput = document.getElementById(`rep-scoreA-${reportId}`);
+            // ... (keep existing validation/setup if any, usually valid)
+
+            const scoreA = scoreAInput.value;
             const scoreB = document.getElementById(`rep-scoreB-${reportId}`).value;
 
             // Get Ballchasing Group URL
@@ -1257,116 +1464,189 @@
             const games = {};
 
             // 1. Capture Game Winners & Inputs
-            // We scan the DOM for game tabs to see how many games we have
-            const gameTabs = card.querySelectorAll('.btn-tab');
-            const gameCount = gameTabs.length || (parseInt(scoreA) + parseInt(scoreB)) || 1;
 
-            for (let i = 1; i <= gameCount; i++) {
-                if (!games[i]) games[i] = { stats: {} };
+            if (gameType === 'Smash Bros') {
+                // SMASH BROS SAVE LOGIC
+                // Iterate Games 1 to gameCount
+                const gameTabs = card.querySelectorAll('.btn-tab');
+                const gameCount = gameTabs.length || (parseInt(scoreA) + parseInt(scoreB)) || 1;
 
-                // Winner (Val)
-                const winSel = document.getElementById(`val-winner-${reportId}-${i}`);
-                if (winSel) games[i].winner = winSel.value;
+                for (let i = 1; i <= gameCount; i++) {
+                    games[i] = { stats: {}, smash_matchups: [] };
 
-                // Map (Val/OW2)
-                const mapSel = document.getElementById(`game-map-${reportId}-${i}`);
-                if (mapSel) games[i].map = mapSel.value;
-            }
+                    // Get Inputs
+                    // Team Selections for this match logic (from top dropdowns)
+                    const leftTeamName = document.getElementById(`smash-team-left-${reportId}-${i}`).value;
+                    const rightTeamName = document.getElementById(`smash-team-right-${reportId}-${i}`).value;
+                    // Note: We save the *selected* team names for restoration
+                    games[i].teamLeft = leftTeamName;
+                    games[i].teamRight = rightTeamName;
 
-            // 2. Process Rows
-            statRows.forEach(row => {
-                const player = row.dataset.player;
-                const gameIdx = row.dataset.game; // '1', '2' or 'total'
+                    // Iterate Matches 1-5 within this Game
+                    for (let m = 1; m <= 5; m++) {
+                        const pA = document.getElementById(`smash-pA-${reportId}-${i}-${m}`)?.value || '';
+                        const charA = document.getElementById(`smash-cA-${reportId}-${i}-${m}`)?.value || '';
+                        const scoreA = document.getElementById(`smash-sA-${reportId}-${i}-${m}`)?.value || '0';
 
-                const inputs = row.querySelectorAll('input[data-stat]');
-                const pStats = {};
-                inputs.forEach(input => {
-                    pStats[input.dataset.stat] = input.value;
+                        const pB = document.getElementById(`smash-pB-${reportId}-${i}-${m}`)?.value || '';
+                        const charB = document.getElementById(`smash-cB-${reportId}-${i}-${m}`)?.value || '';
+                        const scoreB = document.getElementById(`smash-sB-${reportId}-${i}-${m}`)?.value || '0';
+
+                        // Save Metadata for UI Restoration
+                        games[i].smash_matchups.push({
+                            pA, charA, scoreA,
+                            pB, charB, scoreB
+                        });
+
+                        // Populate Stats Object for Public Display (Aggregate)
+                        // P_A
+                        if (pA) {
+                            // Store per-game stats for this player
+                            games[i].stats[pA] = { k: parseInt(scoreA), d: 0, character: charA }; // Using K for Points/Stocks Taken
+
+                            // Aggregate total stats for the match
+                            if (!stats[pA]) stats[pA] = { k: 0, d: 0, s: 0, maps: 0 };
+                            stats[pA].k += parseInt(scoreA);
+                            stats[pA].maps += 1;
+                        }
+
+                        // P_B
+                        if (pB) {
+                            // Store per-game stats for this player
+                            games[i].stats[pB] = { k: parseInt(scoreB), d: 0, character: charB };
+
+                            // Aggregate total stats for the match
+                            if (!stats[pB]) stats[pB] = { k: 0, d: 0, s: 0, maps: 0 };
+                            stats[pB].k += parseInt(scoreB);
+                            stats[pB].maps += 1;
+                        }
+                    }
+                }
+
+            } else {
+                // STANDARD SAVE LOGIC (RL, VAL, OW2)
+
+                // We scan the DOM for game tabs to see how many games we have
+                const gameTabs = card.querySelectorAll('.btn-tab');
+                const gameCount = gameTabs.length || (parseInt(scoreA) + parseInt(scoreB)) || 1;
+
+                for (let i = 1; i <= gameCount; i++) {
+                    if (!games[i]) games[i] = { stats: {} };
+
+                    // Winner (Val)
+                    const winSel = document.getElementById(`val-winner-${reportId}-${i}`);
+                    if (winSel) games[i].winner = winSel.value;
+
+                    // Map (Val/OW2)
+                    const mapSel = document.getElementById(`game-map-${reportId}-${i}`);
+                    if (mapSel) games[i].map = mapSel.value;
+                }
+
+                // 2. Process Rows
+                statRows.forEach(row => {
+                    const player = row.dataset.player;
+                    const gameIdx = row.dataset.game; // '1', '2' or 'total'
+
+                    const inputs = row.querySelectorAll('input[data-stat]');
+                    const pStats = {};
+                    inputs.forEach(input => {
+                        pStats[input.dataset.stat] = input.value;
+                    });
+
+                    if (gameIdx && gameIdx !== 'total') {
+                        // --- PER GAME STATS ---
+                        if (!games[gameIdx]) games[gameIdx] = { stats: {} };
+                        games[gameIdx].stats[player] = pStats;
+
+                        // Aggregate Logic
+                        // Initialize player stats if not exists
+                        // Note: Added dmg/heal/mit to init
+                        if (!stats[player]) stats[player] = { k: 0, d: 0, a: 0, s: 0, sh: 0, acs: 0, econ: 0, fb: 0, pl: 0, df: 0, maps: 0, dmg: 0, heal: 0, mit: 0 };
+
+                        const cur = stats[player];
+                        cur.k += parseInt(pStats.k || 0);
+                        cur.d += parseInt(pStats.d || 0);
+                        cur.a += parseInt(pStats.a || 0);
+
+                        // General Stats
+                        cur.s += parseInt(pStats.s || 0);
+                        cur.sh += parseInt(pStats.sh || 0);
+
+                        // OW2 / Smash Specific (Generic inputs)
+                        if (gameType === 'Overwatch 2') {
+                            cur.dmg = (cur.dmg || 0) + parseInt(pStats.dmg || 0);
+                            cur.heal = (cur.heal || 0) + parseInt(pStats.heal || 0);
+                            cur.mit = (cur.mit || 0) + parseInt(pStats.mit || 0);
+                        }
+
+                        // Val Specific
+                        cur.fb += parseInt(pStats.fb || 0);
+                        cur.pl += parseInt(pStats.pl || 0);
+                        cur.df += parseInt(pStats.df || 0);
+                        cur.acs += parseInt(pStats.acs || 0);
+                        cur.econ += parseInt(pStats.econ || 0);
+
+                        cur.maps += 1;
+
+                        if (pStats.agent) cur.agent = pStats.agent; // Last agent played?
+                    } else {
+                        // Legacy 'total' stats if we ever fall back
+                        if (!stats[player]) stats[player] = pStats;
+                    }
                 });
 
-                if (gameIdx && gameIdx !== 'total') {
-                    // --- PER GAME STATS ---
-                    if (!games[gameIdx]) games[gameIdx] = { stats: {} };
-                    games[gameIdx].stats[player] = pStats;
-
-                    // Aggregate Logic
-                    // Initialize player stats if not exists
-                    if (!stats[player]) stats[player] = { k: 0, d: 0, a: 0, s: 0, sh: 0, acs: 0, econ: 0, fb: 0, pl: 0, df: 0, maps: 0 };
-
-                    const cur = stats[player];
-                    cur.k += parseInt(pStats.k || 0);
-                    cur.d += parseInt(pStats.d || 0);
-                    cur.a += parseInt(pStats.a || 0);
-
-                    // General Stats
-                    cur.s += parseInt(pStats.s || 0);
-                    cur.sh += parseInt(pStats.sh || 0);
-
-                    // OW2 / Smash Specific
-                    cur.dmg = (cur.dmg || 0) + parseInt(pStats.dmg || 0);
-                    cur.heal = (cur.heal || 0) + parseInt(pStats.heal || 0);
-                    cur.mit = (cur.mit || 0) + parseInt(pStats.mit || 0);
-
-                    // Val Specific
-                    cur.fb += parseInt(pStats.fb || 0);
-                    cur.pl += parseInt(pStats.pl || 0);
-                    cur.df += parseInt(pStats.df || 0);
-                    cur.acs += parseInt(pStats.acs || 0);
-                    cur.econ += parseInt(pStats.econ || 0);
-
-                    cur.maps += 1;
-
-                    if (pStats.agent) cur.agent = pStats.agent; // Last agent played?
-                } else {
-                    // Legacy 'total' stats if we ever fall back
-                    if (!stats[player]) stats[player] = pStats;
-                }
-            });
-
-            // 3. Finalize Averages (Valorant) & Totals
-            // For RL/OW, we usually display totals. For Val, avg ACS/Econ.
-            Object.keys(stats).forEach(p => {
-                if (stats[p].maps > 0) {
-                    // Valorant Average Logic
-                    if (stats[p].acs > 0 || stats[p].econ > 0) {
-                        stats[p].acs = Math.round(stats[p].acs / stats[p].maps);
-                        stats[p].econ = Math.round(stats[p].econ / stats[p].maps);
-                        // For Val, Score 's' is usually mapped to ACS for sorting
-                        stats[p].s = stats[p].acs;
+                // 3. Finalize Averages (Valorant) & Totals
+                // For RL/OW, we usually display totals. For Val, avg ACS/Econ.
+                Object.keys(stats).forEach(p => {
+                    if (stats[p].maps > 0) {
+                        // Valorant Average Logic
+                        if (stats[p].acs > 0 || stats[p].econ > 0) {
+                            stats[p].acs = Math.round(stats[p].acs / stats[p].maps);
+                            stats[p].econ = Math.round(stats[p].econ / stats[p].maps);
+                            // For Val, Score 's' is usually mapped to ACS for sorting
+                            stats[p].s = stats[p].acs;
+                        }
+                        // For RL, we might want Total Score, so we leave 's' as sum.
                     }
-                    // For RL, we might want Total Score, so we leave 's' as sum.
-                }
-            });
+                });
+            }
 
             // 4. Generate Match History Arrays
             let matchHistory = [];
             if (Object.keys(games).length > 0) {
                 Object.keys(games).forEach(gIdx => {
                     const g = games[gIdx];
-                    if (g.stats && Object.keys(g.stats).length > 0) {
+                    if ((g.stats && Object.keys(g.stats).length > 0) || (gameType === 'Smash Bros')) {
                         const replay = {
                             map: g.map || '',
                             winner: g.winner || '',
                             blue: { players: [] },
-                            orange: { players: [] }
+                            orange: { players: [] },
+                            // Smash Specifics
+                            teamLeft: g.teamLeft,
+                            teamRight: g.teamRight,
+                            smash_matchups: g.smash_matchups
                         };
 
-                        Object.keys(g.stats).forEach(pName => {
-                            const pStat = g.stats[pName];
-                            // Unified Player Object - Spread pStat into core to capture all custom keys (dmg, heal, mit, etc)
-                            const playerObj = {
-                                name: pName,
-                                stats: {
-                                    core: {
-                                        score: pStat.acs || pStat.s || 0,
-                                        k: pStat.k, d: pStat.d, a: pStat.a,
-                                        ...pStat // Include dmg, heal, mit, etc.
-                                    },
-                                    valorant: pStat
-                                }
-                            };
-                            replay.blue.players.push(playerObj);
-                        });
+                        // Populate players if regular structure is available
+                        if (g.stats) {
+                            Object.keys(g.stats).forEach(pName => {
+                                const pStat = g.stats[pName];
+                                // Unified Player Object - Spread pStat into core to capture all custom keys (dmg, heal, mit, etc)
+                                const playerObj = {
+                                    name: pName,
+                                    stats: {
+                                        core: {
+                                            score: pStat.acs || pStat.s || 0,
+                                            k: pStat.k, d: pStat.d, a: pStat.a,
+                                            ...pStat // Include dmg, heal, mit, etc.
+                                        },
+                                        valorant: (gameType === 'Valorant') ? pStat : undefined
+                                    }
+                                };
+                                replay.blue.players.push(playerObj);
+                            });
+                        }
                         matchHistory.push(replay);
                     }
                 });

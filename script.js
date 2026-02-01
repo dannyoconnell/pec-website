@@ -579,7 +579,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         // Check for Valorant specific stats
                                         const val = p.valorant || (p.stats && p.stats.valorant);
 
-                                        if (val) {
+                                        if (val && game === 'Valorant') {
                                             displayStats[p.name.toLowerCase()] = {
                                                 k: val.k, d: val.d, a: val.a,
                                                 acs: val.acs, econ: val.econ,
