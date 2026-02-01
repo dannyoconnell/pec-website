@@ -504,18 +504,62 @@ document.addEventListener('DOMContentLoaded', async () => {
                         let displayStats = {};
                         const cardTitle = document.querySelector('.card-title'); // "Player Statistics"
 
+                        // Helper for robust extraction
+                        // Helper for robust extraction
+                        const getStat = (p, key, core) => {
+                            let val = 0;
+                            if (core && core[key] !== undefined) val = core[key];
+                            else if (p[key] !== undefined) val = p[key];
+                            else if (p.stats && p.stats[key] !== undefined) val = p.stats[key];
+
+                            // Clean strings (e.g. "1,000") and coerce
+                            if (typeof val === 'string') {
+                                val = val.replace(/,/g, '');
+                                return Number(val) || 0;
+                            }
+                            return Number(val) || 0;
+                        };
+
                         // CASE 1: Series Total (Aggregate)
                         if (mode === 'series') {
                             if (cardTitle) cardTitle.innerHTML = 'Player Statistics <span style="font-weight:400; opacity:0.6; font-size:0.7em; margin-left:0.5rem;">SERIES TOTAL</span>';
 
-                            const totals = report.stats || {};
-                            // Display totals as stored
-                            Object.keys(totals).forEach(pName => {
-                                const t = totals[pName];
-                                displayStats[pName.toLowerCase()] = {
-                                    k: t.k, d: t.d, a: t.a, s: t.s, sh: t.sh
-                                };
-                            });
+                            if (game === 'Overwatch 2' && report.matchHistory) {
+                                // Dynamic Aggregation for Overwatch to fix missing/zero stats in report.stats
+                                const games = Array.isArray(report.matchHistory) ? report.matchHistory : Object.values(report.matchHistory);
+                                games.forEach(g => {
+                                    ['blue', 'orange'].forEach(side => {
+                                        if (g[side] && g[side].players) {
+                                            g[side].players.forEach(p => {
+                                                const name = p.name.toLowerCase();
+                                                const core = p.stats ? p.stats.core : (p.core || {});
+
+                                                if (!displayStats[name]) {
+                                                    displayStats[name] = { k: 0, d: 0, a: 0, s: 0, sh: 0, dmg: 0, heal: 0, mit: 0 };
+                                                }
+                                                displayStats[name].k += getStat(p, 'k', core);
+                                                displayStats[name].d += getStat(p, 'd', core);
+                                                displayStats[name].a += getStat(p, 'a', core);
+                                                displayStats[name].s += getStat(p, 's', core);
+                                                displayStats[name].sh += getStat(p, 'sh', core);
+                                                displayStats[name].dmg += getStat(p, 'dmg', core);
+                                                displayStats[name].heal += getStat(p, 'heal', core);
+                                                displayStats[name].mit += getStat(p, 'mit', core);
+                                            });
+                                        }
+                                    });
+                                });
+                            } else {
+                                // Standard / Fallback (Reads from pre-calculated report.stats)
+                                const totals = report.stats || {};
+                                Object.keys(totals).forEach(pName => {
+                                    const t = totals[pName];
+                                    displayStats[pName.toLowerCase()] = {
+                                        k: t.k, d: t.d, a: t.a, s: t.s, sh: t.sh,
+                                        dmg: t.dmg, heal: t.heal, mit: t.mit
+                                    };
+                                });
+                            }
                         }
                         // CASE 2: Single Game Logic
                         else if (report.matchHistory && report.matchHistory[mode]) {
@@ -529,10 +573,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             // Helper to extract into map
                             const extract = (teamObj) => {
+                                if (!teamObj) return; // Safety check
                                 if (teamObj.players) {
                                     teamObj.players.forEach(p => {
                                         // Check for Valorant specific stats
                                         const val = p.valorant || (p.stats && p.stats.valorant);
+
                                         if (val) {
                                             displayStats[p.name.toLowerCase()] = {
                                                 k: val.k, d: val.d, a: val.a,
@@ -556,14 +602,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             } else {
                                                 // Generic / Manual Entry (OW, Smash)
                                                 displayStats[p.name.toLowerCase()] = {
-                                                    k: core.k || 0,
-                                                    d: core.d || 0,
-                                                    a: core.a || 0,
-                                                    s: core.s || 0,
-                                                    sh: core.sh || 0,
-                                                    dmg: core.dmg || 0,
-                                                    heal: core.heal || 0,
-                                                    mit: core.mit || 0
+                                                    k: getStat(p, 'k', core),
+                                                    d: getStat(p, 'd', core),
+                                                    a: getStat(p, 'a', core),
+                                                    s: getStat(p, 's', core),
+                                                    sh: getStat(p, 'sh', core),
+                                                    dmg: getStat(p, 'dmg', core),
+                                                    heal: getStat(p, 'heal', core),
+                                                    mit: getStat(p, 'mit', core)
                                                 };
                                             }
                                         }
