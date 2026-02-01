@@ -692,17 +692,46 @@
                 // Pass existing stats for this game if available
                 const gStats = (savedGames[i] && savedGames[i].stats) ? savedGames[i].stats : {};
 
+                // Maps Pool
+                const valMaps = ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
+                const owMaps = ['Antarctic Peninsula', 'Blizzard World', 'Busan', 'Circuit Royal', 'Colosseo', 'Dorado', 'Eichenwalde', 'Esperanca', 'Hanaoka', 'Havana', 'Hollywood', 'Ilios', 'Junkertown', 'Kings Row', 'Lijiang Tower', 'Midtown', 'Nepal', 'New Junk City', 'New Queen Street', 'Numbani', 'Oasis', 'Paraiso', 'Rialto', 'Route 66', 'Runasapi', 'Samoa', 'Shambali Monastery', 'Suravasa', 'Throne of Anubis', 'Watchpoint: Gibraltar'];
+
+                let gameMetaHTML = '';
+                if (game === 'Valorant' || game === 'Overwatch 2') {
+                    const maps = game === 'Valorant' ? valMaps : owMaps;
+                    // Sort maps alpha
+                    maps.sort();
+
+                    gameMetaHTML = `
+                        <div style="display:flex; gap:1rem; margin-bottom:1rem; align-items:flex-end;">
+                           <div style="flex:1;">
+                                <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Map</label>
+                                <select class="form-control" id="game-map-${reportId}-${i}" style="width:100%;">
+                                    <option value="">Select Map</option>
+                                    ${maps.map(m => `<option value="${m}" ${savedGames[i]?.map === m ? 'selected' : ''}>${m}</option>`).join('')}
+                                </select>
+                           </div>
+                           ${(game === 'Valorant' || game === 'Overwatch 2') ? `
+                               <div style="flex:1;">
+                                    <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Winner</label>
+                                    <select class="form-control" id="val-winner-${reportId}-${i}" style="width:100%;">
+                                        <option value="">Select Winner</option>
+                                        <option value="${teamA}" ${savedGames[i]?.winner === teamA ? 'selected' : ''}>${teamA}</option>
+                                        <option value="${teamB}" ${savedGames[i]?.winner === teamB ? 'selected' : ''}>${teamB}</option>
+                                    </select>
+                               </div>
+                           ` : ''}
+                        </div>
+                    `;
+                }
+
                 contentHTML += `
                 <div id="game-content-${reportId}-${i}" style="display:${display}">
+                    ${gameMetaHTML}
                     ${game === 'Valorant' ? `
-                        <!-- Val Winner Select & Paste Zone -->
-                        <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                            <select class="form-control" id="val-winner-${reportId}-${i}" style="width:200px;">
-                                <option value="">Select Winner</option>
-                                <option value="${teamA}" ${savedGames[i]?.winner === teamA ? 'selected' : ''}>${teamA}</option>
-                                <option value="${teamB}" ${savedGames[i]?.winner === teamB ? 'selected' : ''}>${teamB}</option>
-                            </select>
-                            <div class="paste-zone" contenteditable="true" style="padding:0.5rem; border:1px dashed #64748b; font-size:0.8rem; color:#94a3b8;" onpaste="handlePaste(event, '${reportId}', ${i})">Paste Scoreboard</div>
+                        <!-- Val Paste Zone -->
+                        <div style="margin-bottom:1rem;">
+                            <div class="paste-zone" contenteditable="true" style="padding:0.5rem; border:1px dashed #64748b; font-size:0.8rem; color:#94a3b8;" onpaste="handlePaste(event, '${reportId}', ${i})">Paste Scoreboard Image (Ctrl+V)</div>
                         </div>
                         <div id="paste-preview-${reportId}-${i}" style="display:none; margin-bottom:1rem;">
                             <img style="max-width:100%; max-height:100px;">
@@ -1233,12 +1262,15 @@
             const gameCount = gameTabs.length || (parseInt(scoreA) + parseInt(scoreB)) || 1;
 
             for (let i = 1; i <= gameCount; i++) {
-                // Check Valid Winner Select (Val only usually)
+                if (!games[i]) games[i] = { stats: {} };
+
+                // Winner (Val)
                 const winSel = document.getElementById(`val-winner-${reportId}-${i}`);
-                if (winSel) {
-                    if (!games[i]) games[i] = { stats: {} };
-                    games[i].winner = winSel.value;
-                }
+                if (winSel) games[i].winner = winSel.value;
+
+                // Map (Val/OW2)
+                const mapSel = document.getElementById(`game-map-${reportId}-${i}`);
+                if (mapSel) games[i].map = mapSel.value;
             }
 
             // 2. Process Rows
@@ -1312,7 +1344,12 @@
                 Object.keys(games).forEach(gIdx => {
                     const g = games[gIdx];
                     if (g.stats && Object.keys(g.stats).length > 0) {
-                        const replay = { blue: { players: [] }, orange: { players: [] } }; // Mock
+                        const replay = {
+                            map: g.map || '',
+                            winner: g.winner || '',
+                            blue: { players: [] },
+                            orange: { players: [] }
+                        };
 
                         Object.keys(g.stats).forEach(pName => {
                             const pStat = g.stats[pName];

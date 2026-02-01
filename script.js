@@ -1,4 +1,5 @@
 // --- Global State & Persistence ---
+console.log('PEC Script V10 Loaded - OW Stats Fix');
 
 // --- Logo Data (Global) ---
 const teamLogos = {
@@ -455,6 +456,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (game) document.getElementById('match-game-type').textContent = game;
 
+            // Header Refinements (User Request)
+            const statusBadge = document.getElementById('match-status');
+            if (statusBadge) statusBadge.style.display = 'none'; // Remove 'FINAL'
+
+            const weekIndex = parseInt(params.get('week')) - 1;
+            if (initialScheduleData && initialScheduleData[weekIndex]) {
+                document.getElementById('match-date').textContent = initialScheduleData[weekIndex].date;
+            }
+
             // BG Gradient
             const scoreSection = document.querySelector('.match-scoreboard-section');
             if (scoreSection) {
@@ -462,6 +472,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const colorB = teamColors[teamB] || '#0f172a';
                 scoreSection.style.background = `linear-gradient(90deg, ${colorA} 0%, #0f172a 35%, #0f172a 65%, ${colorB} 100%)`;
                 scoreSection.style.borderBottom = 'none';
+            }
+
+            // Reset Scoreboard to VS by default (overwriting placeholder)
+            const bigScore = document.querySelector('.big-score');
+            if (bigScore) {
+                bigScore.innerHTML = '<span style="font-size:0.8em; letter-spacing:2px; opacity:0.8;">VS</span>';
             }
 
             // --- Fetch and Render Stats ---
@@ -486,9 +502,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const renderTable = (mode) => {
                         let displayStats = {};
+                        const cardTitle = document.querySelector('.card-title'); // "Player Statistics"
 
                         // CASE 1: Series Total (Aggregate)
                         if (mode === 'series') {
+                            if (cardTitle) cardTitle.innerHTML = 'Player Statistics <span style="font-weight:400; opacity:0.6; font-size:0.7em; margin-left:0.5rem;">SERIES TOTAL</span>';
+
                             const totals = report.stats || {};
                             // Display totals as stored
                             Object.keys(totals).forEach(pName => {
@@ -502,6 +521,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         else if (report.matchHistory && report.matchHistory[mode]) {
                             // Extract stats from specific replay
                             const replay = report.matchHistory[mode];
+
+                            if (cardTitle) {
+                                const mapText = replay.map ? ` • ${replay.map}` : '';
+                                cardTitle.innerHTML = `Player Statistics <span style="font-weight:400; opacity:0.6; font-size:0.7em; margin-left:0.5rem; text-transform:uppercase;">GAME ${mode}${mapText}</span>`;
+                            }
 
                             // Helper to extract into map
                             const extract = (teamObj) => {
@@ -795,9 +819,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     // Also update Main Score if valid in report
-                    if (report.scoreA !== undefined && report.scoreA !== null) {
-                        document.getElementById('score-A').textContent = report.scoreA === '' ? '0' : report.scoreA;
-                        document.getElementById('score-B').textContent = (report.scoreB === undefined || report.scoreB === null || report.scoreB === '') ? '0' : report.scoreB;
+                    if (report.scoreA !== undefined && report.scoreA !== null && report.scoreA !== '') {
+                        const bigScore = document.querySelector('.big-score');
+                        if (bigScore) {
+                            const sA = report.scoreA;
+                            const sB = report.scoreB || '0';
+                            // Determine color for winner
+                            const cA = parseInt(sA) > parseInt(sB) ? 'var(--accent-green)' : '#fff';
+                            const cB = parseInt(sB) > parseInt(sA) ? 'var(--accent-green)' : '#fff';
+
+                            bigScore.innerHTML = `<span id="score-A" style="color:${cA}">${sA}</span> - <span id="score-B" style="color:${cB}">${sB}</span>`;
+                        }
                     }
 
                 } else {
@@ -1587,7 +1619,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Initialize
                 renderTeamSchedule();
                 renderTeamPageRoster();
-                renderTeamStats(); // Init Stats
+                renderTeamStatsV2(); // Init Stats
 
                 // Listener
                 const gameFilterSelect = document.getElementById('team-game-filter');
@@ -1595,7 +1627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     gameFilterSelect.addEventListener('change', () => {
                         renderTeamSchedule();
                         renderTeamPageRoster();
-                        renderTeamStats(); // Update Stats on filter change
+                        renderTeamStatsV2(); // Update Stats on filter change
                     });
                 }
 
@@ -1630,7 +1662,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             Object.values(viewSections).forEach(sec => { if (sec) sec.style.display = 'none'; });
             targetSection.style.display = 'block';
 
-            if (targetKey === 'stats' && typeof renderTeamStats === 'function') renderTeamStats();
+            if (targetKey === 'stats' && typeof renderTeamStatsV2 === 'function') renderTeamStatsV2();
         }
     });
 
@@ -1679,7 +1711,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const playerName = params.get('player');
         const teamName = params.get('team');
 
+        console.log('Player Profile Init:', { playerName, teamName, rosterAvailable: !!rosterData });
+
         if (!playerName || !teamName || !rosterData[teamName]) {
+            console.error('Player/Team not found or Roster missing', { playerName, teamName, rosterKeys: Object.keys(rosterData || {}) });
             document.getElementById('player-content').style.display = 'none';
             document.getElementById('player-not-found').style.display = 'block';
         } else {
@@ -1687,14 +1722,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             const playerObj = rosterData[teamName].find(p => p.name === playerName);
 
             if (!playerObj) {
+                console.error('Player Object not found in Team Roster', { teamName, playerName });
                 document.getElementById('player-content').style.display = 'none';
                 document.getElementById('player-not-found').style.display = 'block';
             } else {
                 // Populate Header
                 document.getElementById('player-name').textContent = playerObj.name;
                 document.getElementById('player-team').textContent = teamName;
-                document.getElementById('player-role').textContent = playerObj.role;
-                document.getElementById('player-game').textContent = playerObj.game;
+
+                const roleEl = document.getElementById('player-role-label') || document.getElementById('player-role');
+                if (roleEl) roleEl.textContent = playerObj.role;
+
+                const gameEl = document.getElementById('player-game-display') || document.getElementById('player-game');
+                if (gameEl) gameEl.textContent = playerObj.game;
+
                 // Avatar
                 document.getElementById('player-img').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(playerObj.name)}&background=random&color=fff&size=200`;
 
@@ -1720,66 +1761,87 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const reportId = `${week.week}-${match.game}-${match.teamA}-${match.teamB}`.replace(/\s+/g, '');
                             const report = matchReports[reportId];
 
-                            if (report && report.stats && (report.stats[playerName] || report.stats[playerName.toLowerCase()])) {
-                                const pStats = report.stats[playerName] || report.stats[playerName.toLowerCase()];
+                            if (report && report.stats) {
+                                // Fuzzy Lookup for Player Name (Case Insensitive)
+                                const reportKeys = Object.keys(report.stats);
+                                const foundKey = reportKeys.find(k => k.toLowerCase() === playerName.toLowerCase().trim());
 
-                                const k = parseInt(pStats.k || 0); // Goals
-                                const d = parseInt(pStats.d || 0); // Saves
-                                const a = parseInt(pStats.a || 0); // Assists
-                                const s = parseInt(pStats.s || 0); // Score
-                                const sh = parseInt(pStats.sh || 0); // Shots
+                                if (foundKey) {
+                                    const pStats = report.stats[foundKey];
 
-                                totalKills += k;
-                                totalDeaths += d;
-                                totalAssists += a;
-                                totalScore += s;
-                                totalShots += sh;
-                                totalSeriesPlayed++;
+                                    const k = parseInt(pStats.k || 0); // Goals / Elims / Stocks Taken
+                                    const d = parseInt(pStats.d || 0); // Saves / Deaths / Stocks Lost
+                                    const a = parseInt(pStats.a || 0); // Assists
+                                    const s = parseInt(pStats.s || 0); // Score / ACS
+                                    const sh = parseInt(pStats.sh || 0); // Shots
 
-                                // Estimate games played in this series
-                                // If matchHistory exists, use length. Else fallback to scoreA + scoreB (minimum) or just 1?
-                                let seriesGames = 0;
-                                if (report.matchHistory && report.matchHistory.length > 0) {
-                                    seriesGames = report.matchHistory.length;
-                                } else if (report.scoreA !== undefined) {
-                                    seriesGames = parseInt(report.scoreA) + parseInt(report.scoreB);
-                                    if (seriesGames === 0) seriesGames = 1; // Fallback
-                                } else {
-                                    seriesGames = 1;
-                                }
-                                totalGamesPlayed += seriesGames;
+                                    // Extra Stats (OW2/Smash)
+                                    const dmg = parseInt(pStats.dmg || 0);
+                                    const heal = parseInt(pStats.heal || 0);
+                                    const mit = parseInt(pStats.mit || 0);
 
-                                // Determine Win/Loss
-                                let result = 'PENDING';
-                                let resultClass = 'text-muted';
+                                    totalKills += k;
+                                    totalDeaths += d;
+                                    totalAssists += a;
+                                    totalScore += s;
+                                    totalShots += sh;
 
-                                if (report.scoreA !== undefined && report.scoreA !== "") {
-                                    const scoreA = parseInt(report.scoreA);
-                                    const scoreB = parseInt(report.scoreB);
+                                    // Store extras in totalScore/totalShots if appropriate, or new vars?
+                                    // Let's simplify and use the same variables but allow custom display logic
+                                    // Actually, let's add specific accumulators to be safe
+                                    playerObj.totalDmg = (playerObj.totalDmg || 0) + dmg;
+                                    playerObj.totalHeal = (playerObj.totalHeal || 0) + heal;
+                                    playerObj.totalMit = (playerObj.totalMit || 0) + mit;
 
-                                    const isTeamA = match.teamA === teamName;
-                                    const myScore = isTeamA ? scoreA : scoreB;
-                                    const oppScore = isTeamA ? scoreB : scoreA;
+                                    totalSeriesPlayed++;
 
-                                    if (myScore > oppScore) {
-                                        result = 'WIN';
+                                    // Estimate games played in this series
+                                    // If matchHistory exists, use length. Else fallback to scoreA + scoreB (minimum) or just 1?
+                                    let seriesGames = 0;
+                                    if (report.matchHistory && (Array.isArray(report.matchHistory) ? report.matchHistory.length : Object.keys(report.matchHistory).length) > 0) {
+                                        const mh = report.matchHistory;
+                                        seriesGames = Array.isArray(mh) ? mh.length : Object.keys(mh).length;
+                                    } else if (report.scoreA !== undefined) {
+                                        seriesGames = parseInt(report.scoreA) + parseInt(report.scoreB);
+                                        if (seriesGames === 0) seriesGames = 1; // Fallback
                                     } else {
-                                        result = 'LOSS';
+                                        seriesGames = 1;
                                     }
+                                    totalGamesPlayed += seriesGames;
+
+                                    // Determine Win/Loss
+                                    let result = 'PENDING';
+                                    let resultClass = 'text-muted';
+
+                                    if (report.scoreA !== undefined && report.scoreA !== "") {
+                                        const scoreA = parseInt(report.scoreA);
+                                        const scoreB = parseInt(report.scoreB);
+
+                                        const isTeamA = match.teamA === teamName;
+                                        const myScore = isTeamA ? scoreA : scoreB;
+                                        const oppScore = isTeamA ? scoreB : scoreA;
+
+                                        if (myScore > oppScore) {
+                                            result = 'WIN';
+                                        } else {
+                                            result = 'LOSS';
+                                        }
+                                    }
+
+                                    const opponent = match.teamA === teamName ? match.teamB : match.teamA;
+
+                                    matchHistory.push({
+                                        opponent,
+                                        result,
+                                        date: week.date,
+                                        k, d, a, s, sh,
+                                        dmg, heal, mit,
+                                        week: week.week,
+                                        game: match.game,
+                                        teamA: match.teamA,
+                                        teamB: match.teamB
+                                    });
                                 }
-
-                                const opponent = match.teamA === teamName ? match.teamB : match.teamA;
-
-                                matchHistory.push({
-                                    opponent,
-                                    result,
-                                    date: week.date,
-                                    k, d, a, s, sh,
-                                    week: week.week,
-                                    game: match.game,
-                                    teamA: match.teamA,
-                                    teamB: match.teamB
-                                });
                             }
                         }
                     });
@@ -1787,10 +1849,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Render Stats Cards
                 const statsGrid = document.querySelector('.career-stats-grid');
+                const avg = (val) => totalGamesPlayed > 0 ? (val / totalGamesPlayed).toFixed(2) : '-'; // Per Game
+                // For Valorant ACS/Econ, we want Average per map, which is logic already handled by 'avg' since totalGamesPlayed = maps played basically
+
                 if (playerObj.game === 'Rocket League') {
                     // Custom Grid for RL
-                    const avg = (val) => totalGamesPlayed > 0 ? (val / totalGamesPlayed).toFixed(2) : '-';
-
                     statsGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
                     statsGrid.innerHTML = `
                         <div class="stat-card">
@@ -1815,15 +1878,92 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <div class="stat-card" style="grid-column: 1/-1; margin-top:0.5rem">
                             <div class="stat-value">${totalGamesPlayed}</div>
-                            <div class="stat-label">Total Games Played</div>
+                            <div class="stat-label">Total Gams Played</div>
+                        </div>
+                     `;
+                } else if (playerObj.game === 'Overwatch 2') {
+                    // OW2 Grid
+                    const tDmg = playerObj.totalDmg || 0;
+                    const tHeal = playerObj.totalHeal || 0;
+                    const tMit = playerObj.totalMit || 0;
+
+                    statsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                    statsGrid.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(totalKills)}</div>
+                            <div class="stat-label">Elims/Game</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(totalAssists)}</div>
+                            <div class="stat-label">Assists/Game</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(totalDeaths)}</div>
+                            <div class="stat-label">Deaths/Game</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(tDmg)}</div>
+                            <div class="stat-label">Dmg/Game</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(tHeal)}</div>
+                            <div class="stat-label">Heal/Game</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(tMit)}</div>
+                            <div class="stat-label">Mit/Game</div>
+                        </div>
+                        <div class="stat-card" style="grid-column: 1/-1;">
+                            <div class="stat-value">${totalGamesPlayed}</div>
+                            <div class="stat-label">Maps Played</div>
+                        </div>
+                     `;
+                } else if (playerObj.game === 'Smash Bros') {
+                    statsGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                    statsGrid.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(totalKills)}</div>
+                            <div class="stat-label">Avg Stocks Taken</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(totalDeaths)}</div>
+                            <div class="stat-label">Avg Stocks Lost</div>
+                        </div>
+                        <div class="stat-card" style="grid-column: 1/-1;">
+                            <div class="stat-value">${totalGamesPlayed}</div>
+                            <div class="stat-label">Sets Played</div>
+                        </div>
+                     `;
+                } else if (playerObj.game === 'Valorant') {
+                    // Val
+                    statsGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+                    statsGrid.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-value">${(totalScore / totalSeriesPlayed).toFixed(0) /* using s for ACS logic from admin */}</div> 
+                            <div class="stat-label">Avg ACS</div> 
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(totalKills)}</div>
+                            <div class="stat-label">Kills/Map</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(totalDeaths)}</div>
+                            <div class="stat-label">Deaths/Map</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${avg(totalAssists)}</div>
+                            <div class="stat-label">Assists/Map</div>
+                        </div>
+                         <div class="stat-card" style="grid-column: 1/-1;">
+                            <div class="stat-value">${totalGamesPlayed}</div>
+                            <div class="stat-label">Maps Played</div>
                         </div>
                      `;
                 } else {
                     // Default
                     document.getElementById('stat-total-kills').textContent = totalKills;
                     document.getElementById('stat-total-assists').textContent = totalAssists;
-                    document.getElementById('stat-games-played').textContent = totalSeriesPlayed; // Shows Series for now
-
+                    document.getElementById('stat-games-played').textContent = totalSeriesPlayed;
                     const kd = totalDeaths === 0 ? totalKills : (totalKills / totalDeaths).toFixed(2);
                     document.getElementById('stat-kd-ratio').textContent = kd;
                 }
@@ -1832,34 +1972,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const historyContainer = document.getElementById('player-match-history');
                 const historyHeader = document.querySelector('.history-header');
 
-                // Update header labels for RL
-                if (playerObj.game === 'Rocket League') {
-                    // Inject custom header if not exists or replace stats label
-                    if (historyHeader) {
-                        historyHeader.innerHTML = `
-                            <div>OPPONENT</div>
-                            <div>RESULT</div>
-                            <div>G / A / Sv / Sh</div>
-                            <div>DATE</div>
-                        `;
-                    }
-                }
+                console.log('Rendering Match History. Found:', matchHistory.length, 'matches.');
+                if (!historyContainer) console.error('History Container not found!');
 
+                // Update Header based on game (Always)
+                // Match History Render
                 if (matchHistory.length === 0) {
-                    historyContainer.innerHTML = '<div style="padding:1rem; text-align:center;">No match data recorded yet.</div>';
-                } else {
+                    if (historyContainer) historyContainer.innerHTML = '<div style="padding:1rem; text-align:center;">No match data recorded yet.</div>';
+                } else if (historyContainer) {
                     historyContainer.innerHTML = matchHistory.reverse().map(m => {
-                        let statString = `${m.k} / ${m.d} / ${m.a}`;
-                        if (playerObj.game === 'Rocket League') {
-                            statString = `${m.k} / ${m.a} / ${m.d} / ${m.sh}`; // G A Sv Sh
-                        }
-
                         return `
-                        <a href="match-details.html?week=${m.week}&game=${encodeURIComponent(m.game)}&teamA=${encodeURIComponent(m.teamA)}&teamB=${encodeURIComponent(m.teamB)}" class="match-history-row">
-                            <div style="font-weight:bold;">vs ${m.opponent}</div>
-                            <div style="${m.result === 'WIN' ? 'color:#4ade80' : 'color:#ef4444'}">${m.result}</div>
-                            <div style="font-family:'Chakra Petch'">${statString}</div>
-                            <div style="font-size:0.8rem; opacity:0.7;">${m.date}</div>
+                        <a href="match-details.html?week=${m.week}&game=${encodeURIComponent(m.game)}&teamA=${encodeURIComponent(m.teamA)}&teamB=${encodeURIComponent(m.teamB)}" class="match-history-row" style="display:grid; grid-template-columns: 1fr 100px 120px; align-items:center; gap:0.5rem; text-decoration:none; color:inherit; padding:0.5rem; border-bottom:1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                            <div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">vs ${m.opponent}</div>
+                            <div style="text-align:center; ${m.result === 'WIN' ? 'color:#4ade80' : 'color:#ef4444'}">${m.result}</div>
+                            <div style="font-size:0.8rem; opacity:0.7; text-align:right;">${m.date}</div>
                         </a>
                     `}).join('');
                 }
@@ -1870,13 +1996,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // --- Global Stats Render Function (Moved to Global Scope) ---
-window.renderTeamStats = () => {
+window.renderTeamStatsV2 = () => {
     const statsContainer = document.getElementById('team-stats-view-content');
     if (!statsContainer) return;
 
     // Get context from URL since we are global now
     const urlParams = new URLSearchParams(window.location.search);
-    const teamId = urlParams.get('team');
+    const teamId = urlParams.get('team') || urlParams.get('id');
     if (!teamId) return;
 
     const gameFilter = document.getElementById('team-game-filter');
@@ -1885,120 +2011,404 @@ window.renderTeamStats = () => {
     console.log('Rendering Stats for:', teamId, activeGame);
 
     if (activeGame === 'Valorant') {
-        const maps = [
-            { name: 'Bind', wins: 0, losses: 1, atkWin: 0, atkR: '0/7', defR: '13/35', defWin: 37 },
-            { name: 'Abyss', wins: 2, losses: 1, atkWin: 65, atkR: '14/8', defR: '12/11', defWin: 53 },
-            { name: 'Haven', wins: 3, losses: 2, atkWin: 61, atkR: '32/22', defR: '22/28', defWin: 52 },
-            { name: 'Lotus', wins: 1, losses: 3, atkWin: 44, atkR: '22/19', defR: '30/27', defWin: 46 },
-            { name: 'Split', wins: 1, losses: 0, atkWin: 66, atkR: '2/1', defR: '1/12', defWin: 7 },
-            { name: 'Ascent', wins: 0, losses: 0, atkWin: 0, atkR: '0/0', defR: '0/0', defWin: 0 }
-        ];
-        const agents = ['jett', 'sova', 'omen', 'killjoy', 'kayo'];
+        const mapStats = {};
+        let totalMatches = 0;
 
+        // Aggregate Map Stats
+        Object.entries(matchReports).forEach(([reportId, r]) => {
+            // Team Match Check (Loose)
+            const tNorm = teamId.toLowerCase().replace(/\s+/g, '');
+            const rIdCheck = reportId.toLowerCase().replace(/\s+/g, '');
+            if (!rIdCheck.includes(tNorm)) return;
+
+            // Ensure it's a Valorant match (either by game prop or inference)
+            // Reports usually have `game` prop in payload, or we check structure.
+            // But simplest is to check if it has valid Val stats or game type in ID?
+            // Week data has game type. But we are iterating matchReports.
+            // Assuming reportId implies game? e.g. "1-Valorant-..."
+            if (!rIdCheck.includes('valorant')) return;
+
+            let mhArray = [];
+            if (r.matchHistory && (Array.isArray(r.matchHistory) ? r.matchHistory.length : Object.keys(r.matchHistory).length) > 0) {
+                mhArray = Array.isArray(r.matchHistory) ? r.matchHistory : Object.values(r.matchHistory);
+            } else if (r.games) {
+                // Fallback: If no matchHistory, try to construct from r.games for map counting?
+                // Or just assume single map if no detail? 
+                // Usually r.games logic in saveReport populates matchHistory.
+            }
+
+            if (mhArray.length > 0) {
+                mhArray.forEach(g => {
+                    if (g.map) {
+                        const mapName = g.map;
+                        if (!mapStats[mapName]) mapStats[mapName] = { w: 0, l: 0, matches: 0 };
+
+                        mapStats[mapName].matches++;
+                        totalMatches++;
+
+                        const winner = (g.winner || '').toLowerCase().trim();
+                        const tStr = teamId.toLowerCase().trim();
+                        if (winner === tStr) mapStats[mapName].w++;
+                        else if (winner && winner !== tStr) mapStats[mapName].l++;
+                    }
+                });
+            }
+        });
+
+        // Generate Table Rows
+        const activeMaps = Object.keys(mapStats).sort((a, b) => mapStats[b].matches - mapStats[a].matches);
+
+        // Render Container
         statsContainer.innerHTML = `
             <table class="val-stats-table">
                 <thead>
                     <tr>
-                        <th>Map</th>
+                        <th style="text-align:left; padding-left:1rem;">Map</th>
+                        <th>Pick Rate</th>
                         <th>Win Percentage</th>
-                        <th>PPR</th>
-                        <th>FFCR</th>
-                        <th>Agent Compositions</th>
-                        <th>ATK Win%</th>
-                        <th>ATK R (W/L)</th>
-                        <th>DEF R (W/L)</th>
-                        <th>DEF Win%</th>
+                        <th>Record</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${maps.map(m => {
-            const total = m.wins + m.losses;
-            const pct = total > 0 ? Math.round((m.wins / total) * 100) : 0;
-            const mapAgents = agents.sort(() => 0.5 - Math.random()).slice(0, 5);
+                    ${activeMaps.length > 0 ? activeMaps.map(mName => {
+            const s = mapStats[mName];
+            const pickRate = totalMatches > 0 ? Math.round((s.matches / totalMatches) * 100) : 0;
+            const winPct = s.matches > 0 ? Math.round((s.w / s.matches) * 100) : 0;
+
+            // Map Image Logic (Valorant)
+            // Clean name for filename
+            const mapFileName = mName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.png';
+            const imageUrl = `assets/maps/valorant/${mapFileName}`;
+
+            // Gradient overlay for readability
+            const bgStyle = `background: linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.3)), url('${imageUrl}') no-repeat center/cover, #334155`;
+
             return `
-                        <tr>
-                            <td>
-                                <div class="val-map-cell" style="background:linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('assets/maps/${m.name.toLowerCase()}.jpg'), #334155; background-size:cover;">
-                                    <span>${m.name}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="win-rate-pill">
-                                    <span class="wr-percent">${pct}%</span>
-                                    <span class="wr-record">${m.wins}W / ${m.losses}L</span>
-                                </div>
-                            </td>
-                            <td class="stat-val">0</td>
-                            <td class="stat-val">0</td>
-                            <td>
-                                <div class="agent-comp">
-                                    ${mapAgents.map(a => `<div class="agent-icon" title="${a}">${a[0].toUpperCase()}</div>`).join('')}
-                                </div>
-                            </td>
-                            <td class="stat-val">${m.atkWin}%</td>
-                            <td style="color:#94a3b8">${m.atkR}</td>
-                            <td style="color:#94a3b8">${m.defR}</td>
-                            <td class="stat-val">${m.defWin}%</td>
-                        </tr>`;
-        }).join('')}
+                            <tr>
+                                <td style="text-align:left; padding-left:1rem;">
+                                    <div class="val-map-cell" style="width:140px; ${bgStyle}; text-shadow: 1px 1px 2px black;">
+                                        <span>${mName}</span>
+                                    </div>
+                                </td>
+                                <td class="stat-val">${pickRate}%</td>
+                                <td>
+                                    <div class="win-rate-pill">
+                                        <span class="wr-percent">${winPct}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="wr-record" style="color:white; font-weight:bold;">${s.w}W - ${s.l}L</span>
+                                </td>
+                            </tr>`;
+        }).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem;">No map data available.</td></tr>'}
                 </tbody>
-            </table>`;
+            </table>
+        </div>
+
+        <!-- Top Performers Section (Valorant) -->
+        <div class="top-performers-section" style="background:#1e293b; border-radius:12px; padding:1.5rem; border:1px solid rgba(255,255,255,0.05);">
+            <h3 style="margin-top:0; margin-bottom:1.5rem; color:#f8fafc; font-size:1.2rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem;">Top Performers (Avg/Game)</h3>
+            <div class="performers-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                ${(() => {
+                const teamPlayers = rosterData[teamId] ? rosterData[teamId].filter(p => p.game === 'Valorant') : [];
+                const playerTotals = {};
+                teamPlayers.forEach(p => {
+                    playerTotals[p.name] = {
+                        name: p.name,
+                        acs: 0, k: 0, d: 0, a: 0, econ: 0, fb: 0,
+                        games: 0,
+                        img: p.photo || 'assets/logo.png', role: p.role
+                    };
+                });
+
+                Object.entries(matchReports).forEach(([reportId, r]) => {
+                    const tNorm = teamId.toLowerCase().replace(/\s+/g, '');
+                    const rIdCheck = reportId.toLowerCase().replace(/\s+/g, '');
+                    if (!rIdCheck.includes(tNorm) || !rIdCheck.includes('valorant')) return;
+
+                    // Count sub-games for averages
+                    let reportGameCount = 0;
+                    if (r.games) reportGameCount = Object.keys(r.games).length;
+                    else reportGameCount = (parseInt(r.scoreA) || 0) + (parseInt(r.scoreB) || 0) || 1;
+
+                    if (r.stats) {
+                        Object.keys(r.stats).forEach(pName => {
+                            const pRecord = playerTotals[pName];
+                            if (pRecord) {
+                                const s = r.stats[pName];
+                                pRecord.acs += parseInt(s.acs || s.s || 0); // s falls back to Score/ACS
+                                pRecord.k += parseInt(s.k || 0);
+                                pRecord.d += parseInt(s.d || 0);
+                                pRecord.a += parseInt(s.a || 0);
+                                pRecord.econ += parseInt(s.econ || 0);
+                                pRecord.fb += parseInt(s.fb || 0);
+                                pRecord.games += reportGameCount;
+                            }
+                        });
+                    }
+                    // Also check detailed r.games stats if top-level missing, but usually aggregation handles it in saveReport.
+                    // Assuming saveReport works as reviewed.
+                });
+
+                const players = Object.values(playerTotals).filter(p => p.games > 0);
+                if (players.length === 0) return '<div style="grid-column: span 2; color:#94a3b8; text-align:center;">No player data available</div>';
+
+                // Helpers
+                const getAvg = (p, key) => p.games > 0 ? (p[key] / p.games) : 0;
+                // KDA Ratio: (K+A)/D (Global)
+                const getKDA = (p) => p.d > 0 ? (p.k + p.a) / p.d : (p.k + p.a);
+
+                // Leaders
+                const getLeaderByKey = (key) => players.reduce((max, p) => getAvg(p, key) > getAvg(max, key) ? p : max, players[0]);
+                const getKDALeader = () => players.reduce((max, p) => getKDA(p) > getKDA(max) ? p : max, players[0]);
+
+                const topACS = getLeaderByKey('acs');
+                const topKDA = getKDALeader();
+                const topEcon = getLeaderByKey('econ');
+                const topFB = getLeaderByKey('fb');
+
+                const fmt = (val) => val.toLocaleString(undefined, { maximumFractionDigits: 1 });
+                const fmtRatio = (val) => val.toFixed(2);
+
+                const renderCard = (title, p, valStr, label) => `
+                        <div class="performer-card" style="background:#0f172a; border-radius:8px; padding:1rem; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden;">
+                            <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.05em;">${title}</div>
+                            <div class="performer-img" style="width:60px; height:60px; border-radius:50%; overflow:hidden; margin-bottom:0.5rem; border:2px solid #ef4444;"> <!-- Red border for Val -->
+                                <img src="${p.img}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='assets/logo.png'">
+                            </div>
+                            <div style="font-weight:bold; color:white; font-size:1rem;">${p.name}</div>
+                            <div style="font-size:1.2rem; color:#ef4444; font-weight:900; margin-top:0.25rem;">${valStr}</div>
+                            <div style="font-size:0.7rem; color:#64748b;">${label}</div>
+                        </div>
+                    `;
+
+                return `
+                        ${renderCard('Combat Score', topACS, fmt(getAvg(topACS, 'acs')), 'Avg ACS')}
+                        ${renderCard('KDA Ratio', topKDA, fmtRatio(getKDA(topKDA)), 'KDA')}
+                        ${renderCard('Econ Rating', topEcon, fmt(getAvg(topEcon, 'econ')), 'Avg Econ')}
+                        ${renderCard('First Bloods', topFB, fmt(getAvg(topFB, 'fb')), 'Avg FB')}
+                    `;
+            })()}
+            </div>
+        `;
+
+        // Layout Styles
+        statsContainer.style.display = 'grid';
+        statsContainer.style.gridTemplateColumns = '1.2fr 0.8fr';
+        statsContainer.style.gap = '2rem';
+        statsContainer.style.alignItems = 'start';
+        if (window.innerWidth < 1024) statsContainer.style.gridTemplateColumns = '1fr';
 
     } else if (activeGame === 'Overwatch 2') {
-        const modes = [
-            { name: 'Control', wins: 5, losses: 2 },
-            { name: 'Hybrid', wins: 3, losses: 4 },
-            { name: 'Escort', wins: 6, losses: 1 },
-            { name: 'Push', wins: 2, losses: 2 },
-            { name: 'Flashpoint', wins: 1, losses: 1 }
-        ];
-        const heroes = ['rein', 'tracer', 'ana', 'lucio', 'sojourn'];
+        const mapStats = {};
+        let totalMatches = 0;
+
+        // Aggregate Data by Map
+        Object.entries(matchReports).forEach(([reportId, r]) => {
+            // Check if this match implies this team
+            const tNorm = teamId.toLowerCase().replace(/\s+/g, '');
+            const rIdCheck = reportId.toLowerCase().replace(/\s+/g, '');
+            if (!rIdCheck.includes(tNorm)) return;
+
+            // STRICT GAME CHECK: Ensure it is an Overwatch report
+            if (!rIdCheck.includes('overwatch')) return;
+
+            if (r.matchHistory && (Array.isArray(r.matchHistory) ? r.matchHistory.length : Object.keys(r.matchHistory).length) > 0) {
+                const mhArray = Array.isArray(r.matchHistory) ? r.matchHistory : Object.values(r.matchHistory);
+                const sample = mhArray[0];
+                if (!sample) return;
+
+                // Relaxed Team Match Check (Removed - using reportId instead)
+                // if (sample.teamA !== teamId && sample.teamB !== teamId) return;
+
+                // Process Games
+                mhArray.forEach(g => {
+                    if (g.map) {
+                        const mapName = g.map;
+                        if (!mapStats[mapName]) {
+                            mapStats[mapName] = { w: 0, l: 0, matches: 0 };
+                        }
+
+                        mapStats[mapName].matches++;
+                        totalMatches++;
+
+                        // Did we win?
+                        const winner = (g.winner || '').toLowerCase().trim();
+                        const tStr = teamId.toLowerCase().trim();
+
+                        if (winner === tStr) {
+                            mapStats[mapName].w++;
+                        } else if (winner && winner !== tStr) {
+                            mapStats[mapName].l++;
+                        }
+                    }
+                });
+            }
+        });
+
+        // Generate Table Rows
+        const activeMaps = Object.keys(mapStats).sort((a, b) => {
+            // Sort by Pick Rate (Matches) Descending, then Win% Descending
+            if (mapStats[b].matches !== mapStats[a].matches) return mapStats[b].matches - mapStats[a].matches;
+            const winRateA = mapStats[a].matches > 0 ? mapStats[a].w / mapStats[a].matches : 0;
+            const winRateB = mapStats[b].matches > 0 ? mapStats[b].w / mapStats[b].matches : 0;
+            return winRateB - winRateA;
+        });
+
         statsContainer.innerHTML = `
             <table class="val-stats-table">
                 <thead>
                     <tr>
-                        <th>Game Mode</th>
+                        <th style="text-align:left; padding-left:1rem;">Map</th>
+                        <th>Pick Rate</th>
                         <th>Win Percentage</th>
-                        <th>Team K/D</th>
-                        <th>Obj Time</th>
-                        <th>Most Played Comp</th>
-                        <th>ATK Win%</th>
-                        <th>DEF Win%</th>
+                        <th>Record</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${modes.map(m => {
-            const total = m.wins + m.losses;
-            const pct = total > 0 ? Math.round((m.wins / total) * 100) : 0;
-            const comp = heroes.sort(() => 0.5 - Math.random()).slice(0, 5);
+                    ${activeMaps.length > 0 ? activeMaps.map(mName => {
+            const s = mapStats[mName];
+            const pickRate = totalMatches > 0 ? Math.round((s.matches / totalMatches) * 100) : 0;
+            const winPct = s.matches > 0 ? Math.round((s.w / s.matches) * 100) : 0;
+
+            // Map Image Logic
+            // Format: "King's Row" -> "kings_row.jpg"
+            const mapFileName = mName.toLowerCase()
+                .replace(/ /g, '_')
+                .replace(/'/g, '')
+                .replace(/:/g, '')
+                .replace(/á/g, 'a')
+                .replace(/í/g, 'i')
+                .replace(/ç/g, 'c')
+                .replace(/ñ/g, 'n') + '.jpg';
+
+            const imageUrl = `assets/maps/overwatch/${mapFileName}`;
+            const bgStyle = `background: linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.3)), url('${imageUrl}') no-repeat center/cover, #334155`;
+
             return `
                         <tr>
-                            <td>
-                                <div class="val-map-cell" style="width:140px; background:linear-gradient(135deg, #ea580c, #9a3412);">
-                                    <span>${m.name}</span>
+                            <td style="text-align:left; padding-left:1rem;">
+                                <div class="val-map-cell" style="width:140px; ${bgStyle}; text-shadow: 1px 1px 2px black;">
+                                    <span>${mName}</span>
                                 </div>
                             </td>
+                            <td class="stat-val">${pickRate}%</td>
                             <td>
                                 <div class="win-rate-pill">
-                                    <span class="wr-percent">${pct}%</span>
-                                    <span class="wr-record">${m.wins}W / ${m.losses}L</span>
+                                    <span class="wr-percent">${winPct}%</span>
                                 </div>
                             </td>
-                            <td class="stat-val">${(1.0 + Math.random()).toFixed(2)}</td>
-                            <td class="stat-val">10:00</td>
-                            <td>
-                                <div class="agent-comp">
-                                    ${comp.map(h => `<div class="agent-icon" style="background:#0284c7; border-color:#0ea5e9">${h[0].toUpperCase()}</div>`).join('')}
-                                </div>
+                             <td>
+                                <span class="wr-record" style="color:white; font-weight:bold;">${s.w}W - ${s.l}L</span>
                             </td>
-                            <td class="stat-val">55%</td>
-                            <td class="stat-val">45%</td>
                         </tr>`;
-        }).join('')}
+        }).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem;">No map data available.</td></tr>'}
                 </tbody>
-            </table>`;
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Top Performers Section -->
+        <div class="top-performers-section" style="background:#1e293b; border-radius:12px; padding:1.5rem; border:1px solid rgba(255,255,255,0.05);">
+            <h3 style="margin-top:0; margin-bottom:1.5rem; color:#f8fafc; font-size:1.2rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem;">Top Performers (Avg/Game)</h3>
+            <div class="performers-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                ${(() => {
+                const teamPlayers = rosterData[teamId] ? rosterData[teamId].filter(p => p.game === 'Overwatch 2') : [];
+                const playerTotals = {};
+
+                teamPlayers.forEach(p => {
+                    // keys: k=Elims, a=Assists, dmg=Damage, heal=Healing
+                    playerTotals[p.name] = { name: p.name, k: 0, a: 0, dmg: 0, heal: 0, games: 0, img: p.photo || 'assets/logo.png', role: p.role };
+                });
+
+                Object.values(matchReports).forEach(r => {
+                    // Determine Game/Map match count for this report
+                    let reportMapCount = 0;
+                    if (r.games) {
+                        reportMapCount = Object.keys(r.games).length;
+                    } else {
+                        // Estimates from score if no details
+                        reportMapCount = (parseInt(r.scoreA) || 0) + (parseInt(r.scoreB) || 0);
+                        if (reportMapCount === 0) reportMapCount = 1;
+                    }
+
+                    if (r.stats) {
+                        Object.keys(r.stats).forEach(pName => {
+                            const pRecord = playerTotals[pName];
+                            if (pRecord) {
+                                const stats = r.stats[pName];
+
+                                // Use 'dmg' and 'heal' based on Admin inspector
+                                pRecord.k += parseInt(stats.k || 0);
+                                pRecord.a += parseInt(stats.a || 0);
+                                pRecord.dmg += parseInt(stats.dmg || stats.s || 0);
+                                pRecord.heal += parseInt(stats.heal || stats.sh || 0);
+
+                                pRecord.games += reportMapCount;
+                            }
+                        });
+                    }
+                });
+
+                const players = Object.values(playerTotals).filter(p => p.games > 0);
+                if (players.length === 0) return '<div style="grid-column: span 2; color:#94a3b8; text-align:center;">No player data available</div>';
+
+                // Calculate Averages and Leaders
+                const getAvg = (p, key) => p.games > 0 ? (p[key] / p.games) : 0;
+
+                const getLeader = (key) => players.reduce((max, p) => getAvg(p, key) > getAvg(max, key) ? p : max, players[0]);
+
+                const topK = getLeader('k');
+                const topA = getLeader('a');
+                const topDmg = getLeader('dmg');
+                const topHeal = getLeader('heal');
+
+                const fmt = (val) => val.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+                const renderCard = (title, p, key, label) => {
+                    const avgVal = getAvg(p, key);
+                    return `
+                            <div class="performer-card" style="background:#0f172a; border-radius:8px; padding:1rem; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden;">
+                                <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.05em;">${title}</div>
+                                <div class="performer-img" style="width:60px; height:60px; border-radius:50%; overflow:hidden; margin-bottom:0.5rem; border:2px solid #3b82f6;">
+                                    <img src="${p.img}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='assets/logo.png'">
+                                </div>
+                                <div style="font-weight:bold; color:white; font-size:1rem;">${p.name}</div>
+                                <div style="font-size:1.2rem; color:#3b82f6; font-weight:900; margin-top:0.25rem;">${fmt(avgVal)}</div>
+                                <div style="font-size:0.7rem; color:#64748b;">${label}/Map</div>
+                            </div>
+                        `;
+                };
+
+                return `
+                        ${renderCard('Most Eliminations', topK, 'k', 'Elims')}
+                        ${renderCard('Most Assists', topA, 'a', 'Assists')}
+                        ${renderCard('Most Damage', topDmg, 'dmg', 'Damage')}
+                        ${renderCard('Most Healing', topHeal, 'heal', 'Healing')}
+                    `;
+            })()}
+            </div>
+        </div>
+        `;
+
+        // Update Container to Grid
+        statsContainer.style.display = 'grid';
+        statsContainer.style.gridTemplateColumns = '1.2fr 0.8fr'; // 60/40 Split
+        statsContainer.style.gap = '2rem';
+        statsContainer.style.alignItems = 'start';
+
+        // Media Query for Mobile (in JS or CSS? JS inline style override might be tricky, better to add class and CSS)
+        // Adding inline media query hack or just ensure CSS handles it.
+        // Let's modify index.css or add a <style> block if needed.
+        // For now, I'll set the grid styles directly.
+        // To make it responsive, I should check window width or use flex-wrap?
+        if (window.innerWidth < 1024) {
+            statsContainer.style.gridTemplateColumns = '1fr';
+        }
 
     } else if (activeGame === 'Rocket League' || activeGame === 'Smash Bros') {
+        statsContainer.style.display = 'block'; // Reset grid layout
+
         const players = (rosterData[teamId] || []).filter(p => p.game === activeGame);
         if (players.length === 0) {
             statsContainer.innerHTML = `<p style="text-align:center; padding:2rem;">No players found for ${activeGame}.</p>`;

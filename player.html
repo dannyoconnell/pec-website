@@ -115,10 +115,27 @@
         .stat-card {
             background: #1e293b;
             border: 1px solid #334155;
-            padding: 2rem;
+            padding: 1rem;
             border-radius: 12px;
             text-align: center;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-family: 'Teko', sans-serif;
+            font-size: 2rem;
+            font-weight: 600;
+            line-height: 1;
+            margin-bottom: 0.2rem;
+            color: white;
+        }
+
+        .stat-label {
+            font-family: 'Chakra Petch', sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         @media (max-width: 768px) {
@@ -227,11 +244,10 @@
                     <h2 class="section-title">Match History</h2>
                     <div class="editor-card" style="padding:0;">
                         <div class="history-header"
-                            style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; padding:1rem; background:#1e293b; color:var(--text-muted); font-size:0.9rem; font-weight:bold; text-transform:uppercase;">
+                            style="display:grid; grid-template-columns: 1fr 100px 120px; padding:1rem; background:#1e293b; color:var(--text-muted); font-size:0.9rem; font-weight:bold; text-transform:uppercase;">
                             <span>Opponent</span>
-                            <span>Result</span>
-                            <span>Stats</span>
-                            <span>Date</span>
+                            <span style="text-align:center">Result</span>
+                            <span style="text-align:right">Date</span>
                         </div>
                         <div id="player-match-history">
                             <!-- Populated by JS -->
@@ -250,7 +266,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=8"></script>
+    <script src="script.js?v=11"></script>
 </body>
 
 </html>

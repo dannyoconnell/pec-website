@@ -950,6 +950,7 @@ select:focus {
 
 .score-team {
     text-align: center;
+    flex: 1;
 }
 
 .score-logo {
