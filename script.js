@@ -2452,13 +2452,13 @@ window.renderTeamStatsV2 = () => {
             statsContainer.style.gridTemplateColumns = '1fr';
         }
 
-    } else if (activeGame === 'Rocket League' || activeGame === 'Smash Bros') {
+    } else if (activeGame === 'Rocket League') {
         statsContainer.style.display = 'block'; // Reset grid layout
 
         const players = (rosterData[teamId] || []).filter(p => p.game === activeGame);
         if (players.length === 0) {
             statsContainer.innerHTML = `<p style="text-align:center; padding:2rem;">No players found for ${activeGame}.</p>`;
-        } else if (activeGame === 'Rocket League') {
+        } else {
             statsContainer.innerHTML = `
                 <table class="val-stats-table">
                     <thead>
@@ -2483,32 +2483,230 @@ window.renderTeamStatsV2 = () => {
             }).join('')}
                     </tbody>
                 </table>`;
-        } else {
-            statsContainer.innerHTML = `
-                <table class="val-stats-table">
-                    <thead>
-                        <tr style="text-align:left;">
-                            <th style="text-align:left; padding-left:2rem;">Player</th>
-                            <th>Sets</th>
-                            <th>W/L</th>
-                            <th>Stocks Taken</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${players.map(p => {
-                const w = Math.floor(Math.random() * 10);
-                const l = Math.floor(Math.random() * 5);
-                return `
-                            <tr>
-                                <td style="text-align:left; padding-left:2rem; font-weight:bold;">${p.name} <span style="font-weight:normal; font-size:0.8rem; color:#94a3b8">(${p.role})</span></td>
-                                <td class="stat-val">${w + l}</td>
-                                <td class="stat-val">${w} - ${l}</td>
-                                <td class="stat-val">${w * 3}</td>
-                            </tr>`;
-            }).join('')}
-                    </tbody>
-                </table>`;
         }
+    } else if (activeGame === 'Smash Bros') {
+        // Grid Layout (Same as OW/Val)
+        statsContainer.style.display = 'grid';
+        statsContainer.style.gridTemplateColumns = '1.2fr 0.8fr';
+        statsContainer.style.gap = '2rem';
+        statsContainer.style.alignItems = 'start';
+        if (window.innerWidth < 1024) statsContainer.style.gridTemplateColumns = '1fr';
+
+        const players = (rosterData[teamId] || []).filter(p => p.game === activeGame);
+
+        // --- Icon Helper ---
+        // Using a known repository for stock icons. 
+        // Fallback or adjustment might be needed if repo changes.
+        // Source: https://github.com/marcrd/smash-ultimate-assets (assuming standard structure or trying a mirror)
+        // Alternative: https://raw.githubusercontent.com/smash-data/stock-icons/master/
+        const getSmashIconUrl = (charName) => {
+            if (!charName) return '';
+            // Normalize: "Mr. Game & Watch" -> "mr_game_and_watch"
+            // Common convention: snake_case, lowercase, no special chars
+            let clean = charName.toLowerCase()
+                .replace(/\./g, '')
+                .replace(/&/g, 'and')
+                .replace(/\s+/g, '_')
+                .replace(/-/g, '_');
+
+            // Handle edge cases based on common repo naming
+            if (clean === 'rosalina_and_luma') clean = 'rosalina'; // Common variation
+            if (clean === 'pyra/mythra') clean = 'pyra'; // Usually split
+            if (clean === 'pokemon_trainer') clean = 'pokemon_trainer_m'; // Often has m/f
+
+            // Trying a likely URL pattern. 
+            // If this fails, the onerror handler will hide the broken image.
+            return `https://raw.githubusercontent.com/smash-data/stock-icons/master/${clean}.png`;
+        };
+
+        // 1. Stats Table
+        const tableHTML = `
+            <table class="val-stats-table">
+                <thead>
+                    <tr style="text-align:left;">
+                        <th style="text-align:left; padding-left:2rem;">Player</th>
+                        <th>Stocks Taken</th>
+                        <th>Stocks Lost</th>
+                        <th>Stock Diff</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${players.length > 0 ? players.map(p => {
+            // Calc Stats from Reports or Fallback
+            // We need to aggregate stats for this player across matches in this report context?
+            // Actually 'renderStats' is usually called with 'activeGame' in the context of a specific WEEK/Match? 
+            // Wait, 'renderStats' in this file seems to calculate generic random stats for RL/Smash in the original code. 
+            // But for OW it calculated real stats from 'matchReports'.
+            // Let's try to get real stats if available, or 0.
+
+            let taken = 0;
+            let lost = 0;
+            let charsPlayed = new Set();
+
+            // Iterate all reports involved? 
+            // Actually, 'renderStats' seems to be built for a single match view context in match-details. 
+            // But the 'rosterData' iteration implies we are showing roster stats?
+            // Ah, the OW section looked at 'matchReports'.
+            // Let's re-use the player aggregation logic if possible, or just default to 0 for now as 'real' data might be sparse.
+            // But checking the OW logic: it iterates 'Object.values(matchReports)'! That means it aggregates ALL TIME stats?
+            // Or is it scoped? 
+            // 'renderStats' takes (teamId, activeGame). It seems to be for "Team Page" or "Match Detail"?
+            // If it's Match Details, we should only look at THIS match.
+            // But the code provided for OW iterates ALL matchReports: `Object.values(matchReports).forEach(r => ...)`
+            // This implies this is a "Team Stats" view on the Team Page, NOT the Match Details page stats?
+            // Wait, 'match-details.html' calls 'renderStats'? No, match-details has its own logic in 'matchDetailsPage' block.
+            // This 'renderStats' function seems to be part of... wait, where is it defined?
+            // I see 'renderPlayerPage' and 'matchDetailsPage' block.
+            // The block I am editing is inside 'window.renderStats = ...' or similar?
+            // Looking at file content... line 2304 is inside a big block.
+            // Ah, I missed the start of the function.
+            // Let's assume this is the Team Details page stats section based on "Top Performers (Avg/Game)".
+
+            // Let's try to be consistent with OW logic (Aggregating all reports).
+
+            Object.values(matchReports).forEach(r => {
+                if (r.game === 'Smash Bros' && (r.teamA === teamId || r.teamB === teamId)) {
+                    if (r.stats && r.stats[p.name]) {
+                        taken += (parseInt(r.stats[p.name].k) || 0);
+                        lost += (parseInt(r.stats[p.name].d) || 0);
+                    }
+                    // Find Character(s) Played in this match
+                    // Check smash_matchups
+                    if (r.smash_matchups) {
+                        r.smash_matchups.forEach(mu => {
+                            if (mu.pA === p.name && mu.charA) charsPlayed.add(mu.charA);
+                            if (mu.pB === p.name && mu.charB) charsPlayed.add(mu.charB);
+                        });
+                    }
+                }
+            });
+
+            const diff = taken - lost;
+            const diffColor = diff > 0 ? '#4ade80' : (diff < 0 ? '#f87171' : '#94a3b8');
+            const diffSign = diff > 0 ? '+' : '';
+
+            // Icons HTML
+            const iconsHtml = Array.from(charsPlayed).map(c => {
+                const url = getSmashIconUrl(c);
+                return `<img src="${url}" title="${c}" style="width:24px; height:24px; object-fit:contain; border-radius:2px;" onerror="this.style.display='none'">`;
+            }).join(' ');
+
+            return `
+                        <tr>
+                            <td style="text-align:left; padding-left:2rem; font-weight:bold;">
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                     <div style="width:3px; height:20px; background:${teamColors[teamId]}"></div>
+                                     <div style="display:flex; flex-direction:column;">
+                                         <span>${p.name}</span>
+                                         ${iconsHtml ? `<div style="display:flex; gap:2px; margin-top:2px;">${iconsHtml}</div>` : ''}
+                                     </div>
+                                </div>
+                            </td>
+                            <td class="stat-val" style="color:var(--accent-green)">${taken}</td>
+                            <td class="stat-val" style="color:var(--accent-red)">${lost}</td>
+                            <td class="stat-val" style="color:${diffColor}; font-weight:bold;">${diffSign}${diff}</td>
+                        </tr>`;
+        }).join('') : '<tr><td colspan="4" style="text-align:center;">No players.</td></tr>'}
+                </tbody>
+            </table>
+        `;
+
+        // 2. Top Performers Cards
+        const performersHTML = (() => {
+            const playerTotals = {};
+            // Init
+            players.forEach(p => {
+                playerTotals[p.name] = { name: p.name, taken: 0, lost: 0, wins: 0, games: 0, img: p.photo || 'assets/logo.png', chars: new Set() };
+            });
+
+            // Aggregate
+            Object.values(matchReports).forEach(r => {
+                if (r.game === 'Smash Bros') {
+                    // Check if team involved
+                    if (r.teamA !== teamId && r.teamB !== teamId) return;
+
+                    // Determine map/game count for averages
+                    let count = 1;
+                    if (r.games) count = Object.keys(r.games).length;
+                    else count = (parseInt(r.scoreA) || 0) + (parseInt(r.scoreB) || 0) || 1;
+
+                    if (r.stats) {
+                        Object.keys(r.stats).forEach(pName => {
+                            if (playerTotals[pName]) {
+                                playerTotals[pName].taken += (parseInt(r.stats[pName].k) || 0);
+                                playerTotals[pName].lost += (parseInt(r.stats[pName].d) || 0);
+                                playerTotals[pName].games += count;
+                            }
+                        });
+                    }
+                    // Chars and Wins Calculation
+                    if (r.smash_matchups) {
+                        r.smash_matchups.forEach(mu => {
+                            // Track Chars
+                            if (playerTotals[mu.pA] && mu.charA) playerTotals[mu.pA].chars.add(mu.charA);
+                            if (playerTotals[mu.pB] && mu.charB) playerTotals[mu.pB].chars.add(mu.charB);
+
+                            // Track Wins (Points Gained)
+                            const sA = parseInt(mu.scoreA) || 0;
+                            const sB = parseInt(mu.scoreB) || 0;
+
+                            if (playerTotals[mu.pA] && sA > sB) playerTotals[mu.pA].wins++;
+                            if (playerTotals[mu.pB] && sB > sA) playerTotals[mu.pB].wins++;
+                        });
+                    }
+                }
+            });
+
+            const activePlayers = Object.values(playerTotals).filter(p => p.games > 0);
+            if (activePlayers.length === 0) return '<div style="color:#94a3b8; text-align:center;">No data available</div>';
+
+            // Metrics: 
+            // 1. Points Gained (Total Wins)
+            // 2. Stocks Taken (Total Stocks)
+
+            const mostWins = activePlayers.reduce((max, p) => p.wins > max.wins ? p : max, activePlayers[0]);
+            const mostTaken = activePlayers.reduce((max, p) => p.taken > max.taken ? p : max, activePlayers[0]);
+
+            const fmt = (n) => n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+            // Select "Main" char for card (first one found)
+            const getCharIcon = (p) => {
+                if (p.chars.size > 0) {
+                    const c = Array.from(p.chars)[0];
+                    return `<img src="${getSmashIconUrl(c)}" style="width:20px; height:20px; position:absolute; bottom:0; right:0; background:#0f172a; border-radius:50%; padding:2px;" onerror="this.style.display='none'">`;
+                }
+                return '';
+            };
+
+            const renderCard = (title, p, valDisplay, subLabel) => `
+                <div class="performer-card" style="background:#0f172a; border-radius:8px; padding:1rem; display:flex; flex-direction:column; align-items:center; text-align:center; border:1px solid #334155;">
+                    <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem; text-transform:uppercase;">${title}</div>
+                    <div class="performer-img" style="width:50px; height:50px; border-radius:50%; overflow:visible; margin-bottom:0.5rem; position:relative;">
+                         <img src="${p.img}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; border:2px solid var(--accent-blue);" onerror="this.src='assets/logo.png'">
+                         ${getCharIcon(p)}
+                    </div>
+                    <div style="font-weight:bold; color:white;">${p.name}</div>
+                    <div style="font-size:1.2rem; color:var(--accent-blue); font-weight:900;">${valDisplay}</div>
+                    <div style="font-size:0.7rem; color:#64748b;">${subLabel}</div>
+                </div>
+            `;
+
+            return `
+                <div class="performers-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                    ${renderCard('Points Gained', mostWins, mostWins.wins, 'Sets Won')}
+                    ${renderCard('Stocks Taken', mostTaken, mostTaken.taken, 'Total Stocks')}
+                </div>
+            `;
+        })();
+
+        statsContainer.innerHTML = `
+            <div>${tableHTML}</div>
+            <div class="top-performers-section" style="background:#1e293b; border-radius:12px; padding:1.5rem; border:1px solid rgba(255,255,255,0.05);">
+                 <h3 style="margin-top:0; margin-bottom:1.5rem; color:#f8fafc; font-size:1.2rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem;">Top Performers</h3>
+                 ${performersHTML}
+            </div>
+        `;
+
     } else {
         statsContainer.innerHTML = `<p style="padding:2rem; text-align:center;">Stats coming soon.</p>`;
     }
