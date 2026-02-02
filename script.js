@@ -502,7 +502,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const renderTable = (mode) => {
                         let displayStats = {};
-                        const cardTitle = document.querySelector('.card-title'); // "Player Statistics"
+                        const cardTitle = document.querySelector('.card-title');
+                        const statsTable = document.getElementById('player-stats-table');
+
+                        // SMASH BROS: Custom Matchup View (Individual Games)
+                        if (game === 'Smash Bros' && mode !== 'series') {
+                            const replay = report.matchHistory[mode];
+                            const matchups = (replay && replay.smash_matchups) || [];
+
+                            // Header
+                            const thead = statsTable.querySelector('thead');
+                            thead.innerHTML = `
+                                <tr>
+                                    <th style="width:40%; text-align:right">${teamA}</th>
+                                    <th style="width:20%; text-align:center">Result</th>
+                                    <th style="width:40%; text-align:left">${teamB}</th>
+                                </tr>
+                            `;
+
+                            // Body
+                            const tbody = statsTable.querySelector('tbody');
+                            if (matchups.length === 0) {
+                                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:2rem; opacity:0.5;">No matchup data available for this game.</td></tr>`;
+                            } else {
+                                tbody.innerHTML = matchups.map(m => {
+                                    if (!m.pA && !m.pB) return ''; // Skip empty rows
+                                    return `
+                                        <tr>
+                                            <td style="text-align:right; vertical-align:middle;">
+                                                <span style="font-weight:bold; font-size:1.1em; display:block;">${m.pA || '<span style="opacity:0.3">-</span>'}</span>
+                                                <span style="font-size:0.85em; opacity:0.7; color:var(--text-muted);">${m.charA || ''}</span>
+                                            </td>
+                                            <td style="text-align:center; vertical-align:middle;">
+                                                <div style="font-weight:900; font-size:1.4em; letter-spacing:2px;">
+                                                    <span style="color:var(--accent-green)">${m.scoreA || '0'}</span>
+                                                    <span style="color:#475569; margin:0 4px;">-</span>
+                                                    <span style="color:var(--accent-red)">${m.scoreB || '0'}</span>
+                                                </div>
+                                            </td>
+                                            <td style="text-align:left; vertical-align:middle;">
+                                                <span style="font-weight:bold; font-size:1.1em; display:block;">${m.pB || '<span style="opacity:0.3">-</span>'}</span>
+                                                <span style="font-size:0.85em; opacity:0.7; color:var(--text-muted);">${m.charB || ''}</span>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('');
+                            }
+
+                            if (cardTitle) cardTitle.innerHTML = `Matchup Details <span style="font-weight:400; opacity:0.6; font-size:0.7em; margin-left:0.5rem;">GAME ${mode}</span>`;
+                            return;
+                        }
 
                         // Helper for robust extraction
                         // Helper for robust extraction
