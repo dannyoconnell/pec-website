@@ -2847,7 +2847,9 @@ window.renderPlayerPage = () => {
         chealing: 0, cdamage: 0, // OW Custom
         stocksLost: 0, // Smash
         // Valorant
-        acs: 0, econ: 0, fb: 0, pl: 0, df: 0
+        a: 0, s: 0, sh: 0,
+        acs: 0, econ: 0, fb: 0, pl: 0, df: 0,
+        dmg: 0, heal: 0, mit: 0
     };
 
     // Iterate all matches to find reports
@@ -2928,6 +2930,9 @@ window.renderPlayerPage = () => {
                     playerStats.a += parseInt(vals.a || 0);
                     playerStats.s += parseInt(vals.s || 0);
                     playerStats.sh += parseInt(vals.sh || 0);
+                    playerStats.dmg += parseInt(vals.dmg || 0);
+                    playerStats.heal += parseInt(vals.heal || 0);
+                    playerStats.mit += parseInt(vals.mit || 0);
                 }
             }
         });
@@ -2985,11 +2990,11 @@ window.renderPlayerPage = () => {
                     <div class="stat-label">Deaths per game</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${avg(playerStats.s)}</div> <!-- Prov: Score -> Dmg -->
+                    <div class="stat-value">${avg(playerStats.dmg)}</div>
                     <div class="stat-label">Damage per game</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${avg(playerStats.sh)}</div> <!-- Prov: Shots -> Heal -->
+                    <div class="stat-value">${avg(playerStats.heal)}</div>
                     <div class="stat-label">Healing per game</div>
                 </div>
             `;

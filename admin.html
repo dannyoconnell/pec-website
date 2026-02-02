@@ -1514,25 +1514,43 @@
 
                         // Populate Stats Object for Public Display (Aggregate)
                         // P_A
+                        // P_A
                         if (pA) {
                             // Store per-game stats for this player
-                            games[i].stats[pA] = { k: parseInt(scoreA), d: 0, character: charA }; // Using K for Points/Stocks Taken
+                            // Note: raw scoreA (points) is stored in 'k' for now, but aggregated 'k' is capped at 3
+                            const pointsA = parseInt(scoreA);
+                            const stocksA = Math.min(3, pointsA);
+
+                            games[i].stats[pA] = { k: pointsA, d: 0, character: charA };
 
                             // Aggregate total stats for the match
                             if (!stats[pA]) stats[pA] = { k: 0, d: 0, s: 0, maps: 0 };
-                            stats[pA].k += parseInt(scoreA);
+                            stats[pA].k += stocksA; // CAP AT 3
                             stats[pA].maps += 1;
+
+                            // Calculate Stocks Lost (Deaths) from Opponent Score
+                            const pointsB_for_calc = parseInt(scoreB);
+                            const stocksLostA = Math.min(3, pointsB_for_calc);
+                            stats[pA].d += stocksLostA;
                         }
 
                         // P_B
                         if (pB) {
+                            const pointsB = parseInt(scoreB);
+                            const stocksB = Math.min(3, pointsB);
+
                             // Store per-game stats for this player
-                            games[i].stats[pB] = { k: parseInt(scoreB), d: 0, character: charB };
+                            games[i].stats[pB] = { k: pointsB, d: 0, character: charB };
 
                             // Aggregate total stats for the match
                             if (!stats[pB]) stats[pB] = { k: 0, d: 0, s: 0, maps: 0 };
-                            stats[pB].k += parseInt(scoreB);
+                            stats[pB].k += stocksB; // CAP AT 3
                             stats[pB].maps += 1;
+
+                            // Calculate Stocks Lost (Deaths) from Opponent Score
+                            const pointsA_for_calc = parseInt(scoreA);
+                            const stocksLostB = Math.min(3, pointsA_for_calc);
+                            stats[pB].d += stocksLostB;
                         }
                     }
                 }
