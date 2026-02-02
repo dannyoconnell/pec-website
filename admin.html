@@ -734,6 +734,17 @@
                          </tbody>
                      </table>
                      
+                     <div style="display:flex; justify-content:space-between; margin-top:1rem; padding-top:1rem; border-top:1px solid #334155; gap:2rem; align-items:center;">
+                         <div style="display:flex; align-items:center; gap:0.5rem;">
+                             <label style="color:#94a3b8; font-size:0.9rem;">Total Points (Team A):</label>
+                             <input type="number" id="smash-total-pA-${reportId}-${gameIdx}" class="form-control" style="width:80px; text-align:center; font-weight:bold;" value="${saved.totalPointsA || ''}" placeholder="0">
+                         </div>
+                         <div style="display:flex; align-items:center; gap:0.5rem;">
+                             <label style="color:#94a3b8; font-size:0.9rem;">Total Points (Team B):</label>
+                             <input type="number" id="smash-total-pB-${reportId}-${gameIdx}" class="form-control" style="width:80px; text-align:center; font-weight:bold;" value="${saved.totalPointsB || ''}" placeholder="0">
+                         </div>
+                     </div>
+
                      <p style="margin-top:0.5rem; color:#94a3b8; font-size:0.8rem;">* Enter "Points" (Stocks Taken). Tiebreaker row optional.</p>
                  </div>
              `;
@@ -751,7 +762,7 @@
                 return;
             }
             // Global Vars
-            let matchReports = {};
+
             let matches = weekData.matches;
             matches = matches.filter(m => m.teamB !== 'BYE');
             if (gameFilter !== 'all') {
@@ -1469,7 +1480,7 @@
                 // SMASH BROS SAVE LOGIC
                 // Iterate Games 1 to gameCount
                 const gameTabs = card.querySelectorAll('.btn-tab');
-                const gameCount = gameTabs.length || (parseInt(scoreA) + parseInt(scoreB)) || 1;
+                const gameCount = (parseInt(scoreA) + parseInt(scoreB)) || gameTabs.length || 1;
 
                 for (let i = 1; i <= gameCount; i++) {
                     games[i] = { stats: {}, smash_matchups: [] };
@@ -1494,9 +1505,11 @@
 
                         // Save Metadata for UI Restoration
                         games[i].smash_matchups.push({
-                            pA, charA, scoreA,
                             pB, charB, scoreB
                         });
+
+                        games[i].totalPointsA = document.getElementById(`smash-total-pA-${reportId}-${i}`)?.value || '';
+                        games[i].totalPointsB = document.getElementById(`smash-total-pB-${reportId}-${i}`)?.value || '';
 
                         // Populate Stats Object for Public Display (Aggregate)
                         // P_A
@@ -1706,7 +1719,7 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (!res.ok) {
-                    if (res.status === 404 || res.status === 500 || res.status === 405) throw new Error("API_UNAVAILABLE");
+                    if (res.status === 404 || res.status === 500 || res.status === 405 || res.status === 501) throw new Error("API_UNAVAILABLE");
                     throw new Error('Save Failed');
                 }
 
@@ -1762,7 +1775,7 @@
                         allMatches[matchIndex].report_data = payload.reportData;
 
                         localStorage.setItem('pec_matches', JSON.stringify(allMatches));
-                        alert('Match Report Saved (Local Dev Mode)!');
+                        alert('Match Report Saved (Local Dev Mode - FIXED)!');
                         await loadAppData();
                         loadReports();
                     } else {
@@ -1832,7 +1845,7 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (!res.ok) {
-                    if (res.status === 404 || res.status === 500 || res.status === 405) throw new Error("API_UNAVAILABLE");
+                    if (res.status === 404 || res.status === 500 || res.status === 405 || res.status === 501) throw new Error("API_UNAVAILABLE");
                     const errText = await res.text();
                     throw new Error(errText || 'Save Failed');
                 }
@@ -2029,7 +2042,7 @@
                 if (!res.ok) {
                     const errText = await res.text();
                     // Detect likely 404/500/405 from static server and fallback
-                    if (res.status === 404 || res.status === 500 || res.status === 405) throw new Error("API_UNAVAILABLE");
+                    if (res.status === 404 || res.status === 500 || res.status === 405 || res.status === 501) throw new Error("API_UNAVAILABLE");
                     throw new Error(errText || 'Save Failed');
                 }
 
@@ -2092,7 +2105,7 @@
                     allMatches = [...recoveredMatches, ...newFlatMatches];
 
                     localStorage.setItem('pec_matches', JSON.stringify(allMatches));
-                    alert(`Week ${week} Schedule Saved (Local Dev Mode)!`);
+                    alert(`Week ${week} Schedule Saved (Local Dev Mode - FIXED)!`);
                     await loadAppData();
                     loadScheduleEditor();
                 } else {
