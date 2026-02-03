@@ -2939,6 +2939,35 @@ window.renderPlayerPage = () => {
                         }
                     });
                 }
+            } else if (p.game === 'Smash Bros' && report.games) {
+                // Dynamic Aggregation for Smash (Retroactive Fix for Player Profile)
+                let playedInThisMatch = false;
+                Object.values(report.games).forEach(g => {
+                    if (g.smash_matchups) {
+                        const match = g.smash_matchups.find(m =>
+                            (m.pA && m.pA.toLowerCase() === p.name.toLowerCase()) ||
+                            (m.pB && m.pB.toLowerCase() === p.name.toLowerCase())
+                        );
+
+                        if (match) {
+                            playedInThisMatch = true;
+                            playerStats.gamesPlayed++;
+
+                            const pA = (match.pA || '').toLowerCase();
+                            const scoreA = parseInt(match.scoreA || 0);
+                            const scoreB = parseInt(match.scoreB || 0);
+
+                            if (pA === p.name.toLowerCase()) {
+                                playerStats.k += Math.min(3, scoreA);
+                                playerStats.d += Math.min(3, scoreB);
+                            } else {
+                                playerStats.k += Math.min(3, scoreB);
+                                playerStats.d += Math.min(3, scoreA);
+                            }
+                        }
+                    }
+                });
+                if (playedInThisMatch) playerStats.seriesPlayed++;
             } else {
                 // RL / OW / Smash (Aggregate stored in report.stats)
                 if (report.stats && report.stats[p.name]) {
