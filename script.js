@@ -573,7 +573,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (mode === 'series') {
                             if (cardTitle) cardTitle.innerHTML = 'Player Statistics <span style="font-weight:400; opacity:0.6; font-size:0.7em; margin-left:0.5rem;">SERIES TOTAL</span>';
 
-                            if (game === 'Overwatch 2' && report.matchHistory) {
+                            if (game === 'Smash Bros' && report.games) {
+                                // Dynamic Aggregation for Smash (Fixes retroactive stats for Stocks Taken/Lost)
+                                Object.values(report.games).forEach(g => {
+                                    if (g.smash_matchups) {
+                                        g.smash_matchups.forEach(m => {
+                                            const pA = (m.pA || '').toLowerCase();
+                                            const pB = (m.pB || '').toLowerCase();
+                                            const scoreA = parseInt(m.scoreA || 0);
+                                            const scoreB = parseInt(m.scoreB || 0);
+
+                                            if (pA) {
+                                                if (!displayStats[pA]) displayStats[pA] = { k: 0, d: 0 };
+                                                displayStats[pA].k += Math.min(3, scoreA);
+                                                displayStats[pA].d += Math.min(3, scoreB);
+                                            }
+                                            if (pB) {
+                                                if (!displayStats[pB]) displayStats[pB] = { k: 0, d: 0 };
+                                                displayStats[pB].k += Math.min(3, scoreB);
+                                                displayStats[pB].d += Math.min(3, scoreA);
+                                            }
+                                        });
+                                    }
+                                });
+                            } else if (game === 'Overwatch 2' && report.matchHistory) {
                                 // Dynamic Aggregation for Overwatch to fix missing/zero stats in report.stats
                                 const games = Array.isArray(report.matchHistory) ? report.matchHistory : Object.values(report.matchHistory);
                                 games.forEach(g => {
