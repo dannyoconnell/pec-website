@@ -160,7 +160,7 @@
 
     <div class="admin-dashboard container" id="dashboard">
         <header style="display:flex; justify-content:space-between; margin-bottom:2rem;">
-            <h1>Admin Control Panel <span style="font-size:0.5em; opacity:0.5">v1.1</span></h1>
+            <h1>Admin Control Panel <span style="font-size:0.5em; opacity:0.5">v1.2</span></h1>
             <div>
                 <button class="btn btn-outline" onclick="window.location.href='index.html'">View Site</button>
                 <button class="btn btn-primary" onclick="resetAppData()">Reset Data</button>
@@ -774,6 +774,7 @@
                 const report = matchReports[reportId] || {};
                 const scoreA = (report.scoreA !== undefined && report.scoreA !== null) ? parseInt(report.scoreA) : '';
                 const scoreB = (report.scoreB !== undefined && report.scoreB !== null) ? parseInt(report.scoreB) : '';
+                const savedGames = report.games || {};
 
                 // Determine initial game count
                 // If saved report has games, use that count. Else use Score sum. Else 1.
@@ -825,15 +826,8 @@
                             </div>
 
                             <!-- Ballchasing / Extra Tools -->
-                            ${m.game === 'Rocket League' ? `
-                                <div style="margin-top:2rem; padding-top:1rem; border-top:1px dashed #334155;">
-                                     <label style="font-size:0.8rem; color:#4ade80; display:block; margin-bottom:0.5rem;">Rocket League Automation</label>
-                                     <div style="display:flex; gap:0.5rem;">
-                                        <input type="text" class="form-control" id="rep-rl-group-${reportId}" placeholder="Paste Group URL">
-                                        <button class="btn btn-outline" onclick="fetchBallchasingStats('${reportId}', '${m.teamA}', '${m.teamB}')">Auto-Fill</button>
-                                     </div>
-                                </div>
-                            ` : ''}
+                            <!-- Rocket League File Upload -->
+
 
                             <button class="btn btn-primary" style="width:100%; margin-top:1.5rem;" onclick="saveReport('${reportId}', '${week}', '${m.game}')">Save Report</button>
                         </div>
@@ -896,6 +890,7 @@
             } else {
                 // STANDARD LAYOUT (RL, VAL, OW2)
                 for (let i = 1; i <= count; i++) {
+                    console.log(`Rendering Game Tab ${i} for ${game} (Report: ${reportId})`);
                     const active = i === 1 ? 'active-tab' : ''; // Default to 1
                     const display = i === 1 ? 'block' : 'none';
 
@@ -941,6 +936,25 @@
                     contentHTML += `
                     <div id="game-content-${reportId}-${i}" style="display:${display}">
                         ${gameMetaHTML}
+                        ${game === 'Rocket League' ? `
+                                <div style="margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px dashed #334155;">
+                                     <label style="font-size:0.8rem; color:#4ade80; display:block; margin-bottom:0.5rem; text-align:center;">
+                                        Upload Replay File (Auto-Analyze)
+                                     </label>
+                                     <div style="display:flex; justify-content:center;">
+                                         <input type="file" accept=".replay" class="form-control" 
+                                            style="width:auto; cursor:pointer;"
+                                            onchange="handleReplayUpload(this, '${reportId}', ${i})"
+                                            ${savedGames[i]?.replayId ? 'disabled' : ''}>
+                                     </div>
+                                     <!-- Hidden input to store Replay ID for persistence -->
+                                     <input type="hidden" id="rl-replay-id-${reportId}-${i}" value="${savedGames[i]?.replayId || ''}">
+                                     
+                                     <div id="replay-status-${reportId}-${i}" style="text-align:center; font-size:0.8rem; margin-top:0.5rem; color:#94a3b8;">
+                                        ${savedGames[i]?.replayId ? `<span style="color:#4ade80">✔ Replay Analyzed (${savedGames[i].replayId})</span>` : ''}
+                                     </div>
+                                </div>
+                        ` : ''}
                         ${game === 'Valorant' ? `
                             <!-- Val Paste Zone -->
                             <div style="margin-bottom:1rem;">
@@ -969,6 +983,117 @@
             }
         };
 
+        // --- ROCKET LEAGUE UPLOAD LOGIC ---
+        async function handleReplayUpload(input, reportId, gameIdx) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const statusId = `replay-status-${reportId}-${gameIdx}`;
+            const statusEl = document.getElementById(statusId);
+            statusEl.innerHTML = '<span style="color:#fbbf24">⏳ Uploading & Analyzing...</span>';
+            input.disabled = true;
+
+            try {
+                // 1. Upload to Ballchasing via Proxy
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploadRes = await fetch('/.netlify/functions/upload-replay', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadRes.ok) {
+                    const err = await uploadRes.json();
+                    throw new Error(err.error || 'Upload failed');
+                }
+
+                const uploadData = await uploadRes.json();
+                const replayId = uploadData.id;
+
+                if (!replayId) throw new Error('No Replay ID returned');
+
+                statusEl.innerHTML = `<span style="color:#fbbf24">⏳ Fetching Stats (${replayId})...</span>`;
+
+                // 2. Fetch Stats for this Replay
+                // We poll for a few seconds because analysis might take a moment?
+                // Actually endpoints usually return metadata immediately or shortly. 
+                // Let's try fetching specifics.
+
+                // Construct target URL for our proxy
+                const statsUrl = `https://ballchasing.com/api/replays/${replayId}`;
+                const statsRes = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(statsUrl)}`);
+
+                if (!statsRes.ok) throw new Error('Failed to fetch stats');
+                const replayStats = await statsRes.json();
+
+                // 3. Parse & Populate
+                processRocketLeagueStats(reportId, gameIdx, replayStats);
+
+                statusEl.innerHTML = `<span style="color:#4ade80">✔ Success! Stats Loaded.</span>`;
+
+                // Store Replay ID in DOM state (will be saved on Save Report)
+                // We need to attach it to the games object
+                // accessing 'games' variable here is tricky scope-wise. 
+                // But we can just rely on the inputs being populated and the Save Logic reading them.
+                // WE SHOULD persist the replayID though for future reference.
+                // Let's add a hidden input or store in a global temp tracker?
+                // Better: The 'games' object in memory (from loadReports) isn't globally accessible easily here without passing it.
+                // We can add a hidden input for replayId
+
+                let hiddenInput = document.getElementById(`rl-replay-id-${reportId}-${gameIdx}`);
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.id = `rl-replay-id-${reportId}-${gameIdx}`;
+                    statusEl.appendChild(hiddenInput); // Just append somewhere valid
+                }
+                hiddenInput.value = replayId;
+
+            } catch (e) {
+                console.error(e);
+                statusEl.innerHTML = `<span style="color:#ef4444">❌ Error: ${e.message}</span>`;
+                input.disabled = false;
+                input.value = ''; // Reset
+            }
+        }
+
+        function processRocketLeagueStats(reportId, gameIdx, replay) {
+            const container = document.getElementById(`game-content-${reportId}-${gameIdx}`);
+            if (!container) return;
+
+            // Helper to normalize name
+            const norm = n => n.toLowerCase().trim();
+            const teamA = document.querySelector(`#report-details-${reportId} label`).innerText; // Hacky way to get Team A name from UI or pass it?
+
+            const allPlayers = [...replay.blue.players, ...replay.orange.players];
+
+            allPlayers.forEach(p => {
+                const pName = p.name;
+                const pStats = p.stats.core;
+
+                const rows = container.querySelectorAll('.stat-row-input');
+                let targetRow = null;
+
+                // Fuzzy Match?
+                rows.forEach(r => {
+                    const rowName = norm(r.dataset.player);
+                    // Check exact match or substring
+                    if (rowName === norm(pName) || pName.toLowerCase().includes(rowName)) {
+                        targetRow = r;
+                    }
+                });
+
+                if (targetRow) {
+                    targetRow.querySelector('[data-stat="k"]').value = pStats.goals;
+                    targetRow.querySelector('[data-stat="d"]').value = pStats.saves;
+                    targetRow.querySelector('[data-stat="a"]').value = pStats.assists;
+                    targetRow.querySelector('[data-stat="s"]').value = pStats.score;
+                    targetRow.querySelector('[data-stat="sh"]').value = pStats.shots;
+                }
+            });
+        };
+
         window.switchReportTab = (rid, idx) => {
             // Update active tab style
             document.querySelectorAll(`#report-details-${rid} .btn-tab`).forEach(b => {
@@ -988,111 +1113,7 @@
         };
 
 
-        // --- BALLCHASING API LOGIC ---
-        async function fetchBallchasingStats(reportId, teamA, teamB) {
-            const fetchBtn = document.querySelector(`#report-details-${reportId} button.btn-outline`);
-            if (!fetchBtn) return;
-            const originalText = fetchBtn.textContent;
-            fetchBtn.textContent = 'Processing Group...';
-            fetchBtn.disabled = true;
 
-            try {
-                // 1. Get Group URL
-                const groupInput = document.getElementById(`rep-rl-group-${reportId}`);
-                const groupUrl = groupInput ? groupInput.value.trim() : '';
-                if (!groupUrl) throw new Error('Please paste a valid Ballchasing Group URL.');
-
-                // Extract Group ID
-                const match = groupUrl.match(/\/group\/([a-zA-Z0-9-]+)/);
-                if (!match) throw new Error('Invalid Group URL format.');
-                const groupId = match[1];
-
-                // 2. Fetch Group & Replays
-                fetchBtn.textContent = 'Fetching Data...';
-                // We need Replays List primarily
-                const replaysTargetUrl = `https://ballchasing.com/api/replays?group=${groupId}&sort-by=replay-date&sort-dir=asc`;
-                const replaysQuery = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(replaysTargetUrl)}`);
-                if (!replaysQuery.ok) throw new Error('Failed to fetch replays list');
-
-                const replaysData = await replaysQuery.json();
-                const replays = replaysData.list || [];
-
-                if (replays.length === 0) throw new Error('No replays found in this group.');
-
-                // 3. Determine Scores & Game Count
-                let winsA = 0;
-                let winsB = 0;
-
-                // Helper to normalize name (strip whitespace, lower)
-                const norm = n => n.toLowerCase().trim();
-                const rosterA = (rosterData[teamA] || []).map(r => norm(r.name));
-
-                replays.forEach(replay => {
-                    const blueGoals = replay.blue?.stats?.core?.goals || 0;
-                    const orangeGoals = replay.orange?.stats?.core?.goals || 0;
-
-                    // Identify Team A color
-                    // Check intersection of Blue Players with Team A Roster
-                    const bluePlayers = replay.blue.players.map(p => norm(p.name));
-                    const isBlueA = bluePlayers.some(bp => rosterA.includes(bp));
-
-                    if (isBlueA) {
-                        if (blueGoals > orangeGoals) winsA++;
-                        else if (orangeGoals > blueGoals) winsB++;
-                    } else {
-                        if (orangeGoals > blueGoals) winsA++;
-                        else if (blueGoals > orangeGoals) winsB++;
-                    }
-                });
-
-                // Update Scores
-                document.getElementById(`rep-scoreA-${reportId}`).value = winsA;
-                document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
-
-                // 4. Update Game Tabs
-                // We must update tabs to match replay count
-                window.updateGameTabs(reportId, teamA, teamB, 'Rocket League');
-
-                // 5. Fill Stats Per Game
-                replays.forEach((replay, idx) => {
-                    const gameIdx = idx + 1;
-                    const container = document.getElementById(`game-content-${reportId}-${gameIdx}`);
-                    if (!container) return; // Tab didn't generate?
-
-                    // Combine Blue and Orange players
-                    const allPlayers = [...replay.blue.players, ...replay.orange.players];
-
-                    allPlayers.forEach(p => {
-                        const pName = p.name;
-                        const pStats = p.stats.core;
-
-                        const rows = container.querySelectorAll('.stat-row-input');
-                        let targetRow = null;
-
-                        rows.forEach(r => {
-                            if (norm(r.dataset.player) === norm(pName)) targetRow = r;
-                        });
-
-                        if (targetRow) {
-                            targetRow.querySelector('[data-stat="k"]').value = pStats.goals;
-                            targetRow.querySelector('[data-stat="d"]').value = pStats.saves;
-                            targetRow.querySelector('[data-stat="a"]').value = pStats.assists;
-                            targetRow.querySelector('[data-stat="s"]').value = pStats.score;
-                            targetRow.querySelector('[data-stat="sh"]').value = pStats.shots;
-                        }
-                    });
-                });
-
-                alert(`Successfully processed ${replays.length} replays!`);
-
-            } catch (e) {
-                console.error(e);
-                alert("Error: " + e.message);
-            } finally {
-                fetchBtn.textContent = originalText;
-                fetchBtn.disabled = false;
-            }
-        }
 
 
         function renderPlayerStatsInputs(team, game, reportId, stats, gameIdx = null) {
@@ -1462,9 +1483,8 @@
             const scoreA = scoreAInput.value;
             const scoreB = document.getElementById(`rep-scoreB-${reportId}`).value;
 
-            // Get Ballchasing Group URL
-            const groupInput = document.getElementById(`rep-rl-group-${reportId}`);
-            const ballchasingGroupUrl = groupInput ? groupInput.value.trim() : '';
+            // Get Ballchasing Group URL (Deprecated)
+            const ballchasingGroupUrl = '';
 
             const card = document.getElementById(`report-details-${reportId}`);
             // Find all game inputs
@@ -1572,6 +1592,10 @@
                     // Map (Val/OW2)
                     const mapSel = document.getElementById(`game-map-${reportId}-${i}`);
                     if (mapSel) games[i].map = mapSel.value;
+
+                    // Replay ID (Rocket League)
+                    const replayHidden = document.getElementById(`rl-replay-id-${reportId}-${i}`);
+                    if (replayHidden) games[i].replayId = replayHidden.value;
                 }
 
                 // 2. Process Rows

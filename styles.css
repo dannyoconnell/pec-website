@@ -1701,3 +1701,288 @@ select:focus {
     text-decoration: none;
     font-weight: 600;
 }
+
+/* --- Schedule Page Redesign (ESPN Style) --- */
+
+/* Controls Container */
+.schedule-controls {
+    background: var(--bg-card);
+    border-bottom: 1px solid #334155;
+    position: sticky;
+    top: 70px;
+    /* Below main header */
+    z-index: 90;
+    padding: 1rem 0;
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-family: var(--font-head);
+    font-size: 2rem;
+    color: white;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    padding: 0 1rem;
+}
+
+/* Week Selector */
+.week-selector-container {
+    display: flex;
+    align-items: center;
+    background: #0f172a;
+    border-top: 1px solid #334155;
+    border-bottom: 1px solid #334155;
+    position: relative;
+}
+
+.week-selector {
+    flex: 1;
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+}
+
+.week-selector::-webkit-scrollbar {
+    display: none;
+}
+
+.week-item {
+    flex: 0 0 auto;
+    padding: 0.75rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    border-right: 1px solid #334155;
+    transition: background 0.2s;
+    min-width: 100px;
+}
+
+.week-item:hover {
+    background: #1e293b;
+}
+
+.week-item.active {
+    background: white;
+    color: #0f172a;
+}
+
+.week-item.active .week-label,
+.week-item.active .week-date {
+    color: #0f172a;
+}
+
+.week-label {
+    display: block;
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.week-date {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.scroll-btn {
+    background: #1e293b;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    padding: 0 1rem;
+    cursor: pointer;
+    height: 100%;
+    z-index: 2;
+}
+
+.scroll-btn:hover {
+    background: #334155;
+}
+
+/* Filters Bar */
+.filters-bar {
+    padding: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.modern-select {
+    background: #0f172a;
+    color: white;
+    border: 1px solid #334155;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-family: var(--font-body);
+    min-width: 200px;
+}
+
+/* Schedule List View */
+.schedule-list-header {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1fr;
+    padding: 0.75rem 1rem;
+    background: #1e293b;
+    border-bottom: 2px solid #334155;
+    font-family: var(--font-head);
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+}
+
+.schedule-row {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1fr;
+    padding: 1rem;
+    align-items: center;
+    background: var(--bg-card);
+    border-bottom: 1px solid #334155;
+    transition: background 0.2s;
+}
+
+.schedule-row:hover {
+    background: #2a384b;
+}
+
+.col-matchup {
+    display: grid;
+    grid-template-columns: 1fr 30px 1fr;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.match-team {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+/* Team A: Right Align, Text -> Logo */
+.col-matchup .match-team:first-child {
+    justify-content: flex-end;
+    flex-direction: row-reverse;
+    text-align: right;
+}
+
+/* Team B: Left Align, Logo -> Text (Default) */
+.col-matchup .match-team:last-child {
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.match-team img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.match-team span {
+    font-weight: 700;
+    font-size: 1.1rem;
+    line-height: 1.1;
+}
+
+.match-at {
+    justify-self: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.col-time {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.col-tv {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.tv-badge {
+    background: #334155;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.col-result {
+    font-weight: 700;
+    font-family: var(--font-head);
+}
+
+.result-win {
+    color: #4ade80;
+}
+
+.result-loss {
+    color: #ef4444;
+}
+
+.result-pending {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+/* Metadata (Game Type) */
+.row-meta {
+    grid-column: 1 / -1;
+    font-size: 0.75rem;
+    color: var(--accent-blue);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .schedule-list-header {
+        display: none;
+        /* Hide headers on mobile */
+    }
+
+    .schedule-row {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding: 1.5rem 1rem;
+    }
+
+    .col-matchup {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    /* Reset Team A alignment on mobile */
+    .col-matchup .match-team:first-child {
+        justify-content: flex-start;
+        flex-direction: row;
+        text-align: left;
+    }
+
+    .match-at {
+        display: none;
+        /* Hide 'vs' text, implied by stack */
+    }
+
+    .col-time,
+    .col-tv,
+    .col-result {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+}

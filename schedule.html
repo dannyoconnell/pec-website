@@ -10,7 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;700&family=Teko:wght@400;600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=13">
 </head>
 
 <body>
@@ -47,22 +47,29 @@
 
     <main>
         <section class="schedule-section container">
-            <div class="section-header">
-                <h2>Full Schedule</h2>
-                <div class="filters">
-                    <select id="week-filter">
-                        <option value="1">Week 1 (Jan 19)</option>
-                        <option value="2">Week 2 (Jan 26)</option>
-                        <option value="3">Week 3 (Feb 2)</option>
-                        <option value="4">Week 4 (Feb 9)</option>
-                        <option value="5">Week 5 (Feb 16)</option>
-                        <option value="6">Week 6 (Feb 23)</option>
-                        <option value="7">Week 7 (Mar 2)</option>
-                        <option value="8">Week 8 (Mar 9)</option>
-                        <option value="9">Week 9 (Mar 16)</option>
-                    </select>
+            <div class="schedule-controls">
+                <h1 class="page-title">Season Schedule</h1>
 
-                    <select id="team-filter">
+                <!-- Week Selector (Horizontal Scroll) -->
+                <div class="week-selector-container">
+                    <button class="scroll-btn left" onclick="scrollWeeks(-1)">&#8249;</button>
+                    <div class="week-selector" id="week-selector">
+                        <!-- Injected via JS -->
+                        <div class="week-item active" data-week="1">
+                            <span class="week-label">WEEK 1</span>
+                            <span class="week-date">JAN 19</span>
+                        </div>
+                        <div class="week-item" data-week="2">
+                            <span class="week-label">WEEK 2</span>
+                            <span class="week-date">JAN 26</span>
+                        </div>
+                        <!-- ... will be dynamic ... -->
+                    </div>
+                    <button class="scroll-btn right" onclick="scrollWeeks(1)">&#8250;</button>
+                </div>
+
+                <div class="filters-bar">
+                    <select id="team-filter" class="modern-select">
                         <option value="all">All Teams</option>
                         <option value="Baylor">Baylor</option>
                         <option value="Boise State">Boise State</option>
@@ -77,7 +84,14 @@
                 </div>
             </div>
 
-            <div class="schedule-grid" id="full-schedule-grid">
+            <div class="schedule-list-header">
+                <div class="col-matchup">MATCHUP</div>
+                <div class="col-time">TIME</div>
+                <div class="col-tv">WATCH</div>
+                <div class="col-result">RESULT</div>
+            </div>
+
+            <div class="schedule-list" id="full-schedule-list">
                 <!-- Injected via JS -->
             </div>
         </section>
@@ -98,7 +112,8 @@
         </div>
     </footer>
 
-    <script src="script.js?v=4"></script>
+    <script src="script.js?v=13"></script>
+    </script>
 </body>
 
 </html>

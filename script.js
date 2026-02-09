@@ -1394,66 +1394,185 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // --- Full Schedule Page Logic (Separated for clarity) ---
-    const fullScheduleGrid = document.getElementById('full-schedule-grid');
-    if (fullScheduleGrid) {
-        const weekFilter = document.getElementById('week-filter');
+    // --- Full Schedule Page Logic (ESPN Style) ---
+    const scheduleListContainer = document.getElementById('full-schedule-list');
+    if (scheduleListContainer) {
+        let currentWeek = 1;
+        try {
+            // Try to sync with global settings if possible, or just default to 1
+            const settings = JSON.parse(localStorage.getItem('pec_settings') || '{}');
+            currentWeek = parseInt(settings.currentWeek || 1);
+        } catch (e) { }
+
         const teamFilter = document.getElementById('team-filter');
 
-        const renderFullSchedule = () => {
-            const selectedWeek = parseInt(weekFilter.value);
-            const selectedTeam = teamFilter.value;
+        // --- Functions ---
+        const renderScheduleList = (matches) => {
+            scheduleListContainer.innerHTML = '';
 
-            const weekData = scheduleData.find(w => w.week === selectedWeek);
-
-            if (!weekData) {
-                fullScheduleGrid.innerHTML = '<p style="text-align:center; grid-column: 1/-1; color: var(--text-muted);">Schedule data coming soon.</p>';
+            if (matches.length === 0) {
+                scheduleListContainer.innerHTML = `
+                    <div style="padding: 3rem; text-align: center; color: var(--text-muted); font-family: var(--font-head); font-size: 1.2rem;">
+                        NO MATCHES SCHEDULED
+                    </div>
+                `;
                 return;
             }
 
-            let filteredMatches = weekData.matches;
+            matches.forEach(match => {
+                const isBye = match.teamA === 'BYE' || match.teamB === 'BYE';
+                if (isBye) return;
 
-            // Filter by Team
-            // Filter by Team
-            if (selectedTeam !== 'all') {
-                filteredMatches = filteredMatches.filter(m =>
-                    m.teamA === selectedTeam || m.teamB === selectedTeam
-                );
-            }
+                // Determine Report/Score status
+                // Construct Report ID: week-game-teamA-teamB
+                const reportId = `${match.week || currentWeek}-${match.game}-${match.teamA}-${match.teamB}`.replace(/\s+/g, '');
+                const report = matchReports[reportId];
 
-            // Filter by Game (Global activeGameFilter)
-            if (activeGameFilter !== 'all') {
-                filteredMatches = filteredMatches.filter(m => m.game === activeGameFilter);
-            }
+                // Score Logic
+                let scoreA = '', scoreB = '';
+                let resultClass = 'result-pending';
+                let resultText = 'VS';
+                let isFinal = false;
 
-            // Note: We currently don't use the Global Game Filter on the standalone Schedule page 
-            // per instructions (updated Landing Page), but we could add it easily. 
-            // For now, standalone schedule is independent.
+                // Check Report (Final Source) first, then Match Data
+                if (report && report.status === 'FINAL') {
+                    scoreA = report.scoreA;
+                    scoreB = report.scoreB;
+                    isFinal = true;
+                } else if (match.status === 'FINAL' || (match.scoreA !== undefined && match.scoreA !== null && match.scoreA !== '-')) {
+                    // Fallback to basic match data if report is missing but score exists
+                    scoreA = match.scoreA;
+                    scoreB = match.scoreB;
+                    isFinal = true;
+                }
 
-            if (filteredMatches.length === 0) {
-                fullScheduleGrid.innerHTML = '<p style="text-align:center; grid-column: 1/-1; color: var(--text-muted);">No matches found.</p>';
-                return;
-            }
+                if (isFinal) {
+                    // Determine winner style
+                    // Helper for logo
+                    const getTinyLogo = (name) => {
+                        const src = teamLogos[name] || 'placeholder.png';
+                        return `<img src="${src}" style="width:24px; height:24px; object-fit:contain; vertical-align:middle; margin:0 4px;">`;
+                    };
 
-            fullScheduleGrid.innerHTML = filteredMatches.map(m => createMatchCard(m, `Week ${selectedWeek} • ${weekData.date}`)).join('');
+                    if (parseInt(scoreA) > parseInt(scoreB)) {
+                        resultText = `${getTinyLogo(match.teamA)} <span class="result-win">${scoreA}</span> - <span class="result-loss">${scoreB}</span>`;
+                        resultClass = 'result-final';
+                    } else if (parseInt(scoreB) > parseInt(scoreA)) {
+                        resultText = `<span class="result-loss">${scoreA}</span> - <span class="result-win">${scoreB}</span> ${getTinyLogo(match.teamB)}`;
+                        resultClass = 'result-final';
+                    } else {
+                        // Tie
+                        resultText = `<span class="result-final">${scoreA}</span> - <span class="result-final">${scoreB}</span>`;
+                        resultClass = 'result-final';
+                    }
+                } else if (match.status === 'LIVE' || (report && report.status === 'LIVE')) {
+                    resultText = 'LIVE';
+                    resultClass = 'result-live';
+                }
+
+                // Watch Link
+                let channelName = 'Twitch';
+                if (twitchChannels && twitchChannels[match.teamA]) channelName = 'Twitch';
+
+                // Match Details URL
+                const detailsUrl = `match-details.html?week=${match.week || currentWeek}&game=${encodeURIComponent(match.game)}&teamA=${encodeURIComponent(match.teamA)}&teamB=${encodeURIComponent(match.teamB)}`;
+
+                // Create Row HTML
+                const row = document.createElement('div');
+                row.className = 'schedule-row';
+                row.onclick = (e) => {
+                    if (e.target.tagName !== 'A') window.location.href = detailsUrl;
+                };
+                row.style.cursor = 'pointer';
+
+                const teamALogo = getLogoImg(match.teamA);
+                const teamBLogo = getLogoImg(match.teamB);
+
+                // Time Logic
+                const timeDisplay = match.status === 'LIVE' ? '<span style="color:var(--accent-red); font-weight:700;">LIVE</span>' : match.time;
+
+                row.innerHTML = `
+                    <div class="row-meta">${match.game}</div>
+                    <div class="col-matchup">
+                        <div class="match-team">
+                            <div class="team-logo">${teamALogo}</div>
+                            <span>${match.teamA}</span>
+                        </div>
+                        <div class="match-at">@</div>
+                        <div class="match-team">
+                            <div class="team-logo">${teamBLogo}</div>
+                            <span>${match.teamB}</span>
+                        </div>
+                    </div>
+                    <div class="col-time">${timeDisplay}</div>
+                    <div class="col-tv">
+                        <span class="tv-badge">TV</span> ${channelName}
+                    </div>
+                    <div class="col-result ${resultClass}">
+                        ${resultText}
+                    </div>
+                `;
+                scheduleListContainer.appendChild(row);
+            });
         };
 
-        if (weekFilter && teamFilter) {
-            weekFilter.addEventListener('change', renderFullSchedule);
-            teamFilter.addEventListener('change', renderFullSchedule);
+        const updateSchedule = () => {
+            const weekData = scheduleData.find(w => w.week === currentWeek);
 
-            // Listen to Game Filter clicks (redundant with global listener for state update, but needed for trigger)
-            const schedulePageGameFilters = document.querySelectorAll('.game-filter');
-            schedulePageGameFilters.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    // activeGameFilter is updated by global listener
-                    // We just need to wait a tick or just re-render (since global runs first usually)
-                    // Actually, listeners run in order. Global one updates state. We just re-render.
-                    renderFullSchedule();
-                });
+            // Filters: Team Filter (DOM)
+            const selectedTeam = teamFilter ? teamFilter.value : 'all';
+
+            let filteredMatches = weekData ? weekData.matches : [];
+
+            if (selectedTeam !== 'all') {
+                filteredMatches = filteredMatches.filter(m => m.teamA === selectedTeam || m.teamB === selectedTeam);
+            }
+
+            renderScheduleList(filteredMatches);
+        };
+
+        const renderWeekSelector = () => {
+            const container = document.getElementById('week-selector');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            scheduleData.forEach((week, index) => {
+                const weekNum = index + 1;
+                const el = document.createElement('div');
+                el.className = `week-item ${weekNum === currentWeek ? 'active' : ''}`;
+                el.onclick = () => {
+                    currentWeek = weekNum;
+                    // Update active state UI
+                    document.querySelectorAll('.week-item').forEach(i => i.classList.remove('active'));
+                    el.classList.add('active');
+                    updateSchedule();
+                };
+
+                el.innerHTML = `
+                    <span class="week-label">Week ${weekNum}</span>
+                    <span class="week-date">${week.date.split(',')[0]}</span>
+                `;
+                container.appendChild(el);
             });
+        };
 
-            renderFullSchedule();
+        // Scroll Logic
+        window.scrollWeeks = (direction) => {
+            const container = document.getElementById('week-selector');
+            if (container) {
+                const scrollAmount = 200;
+                container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+            }
+        };
+
+        // --- Init ---
+        if (teamFilter) {
+            teamFilter.addEventListener('change', updateSchedule);
         }
+
+        renderWeekSelector();
+        updateSchedule();
     }
 
     // --- Standings Data ---
