@@ -176,6 +176,7 @@
                 <div class="admin-nav-item" onclick="switchTab('reports')">Match Reports</div>
                 <div class="admin-nav-item" onclick="switchTab('news')">News Editor</div>
                 <div class="admin-nav-item" onclick="switchTab('watch')">Watch Links</div>
+                <div class="admin-nav-item" onclick="switchTab('odds')">Match Odds</div>
             </aside>
 
             <main class="admin-content">
@@ -365,6 +366,39 @@
                     <button class="btn btn-primary" style="margin-top:2rem;" onclick="saveWatchLinks()">Save
                         Links</button>
                 </div>
+
+                <!-- Odds Editor -->
+                <div id="view-odds" style="display:none;">
+                    <h2>Manage Match Odds</h2>
+                    <p style="color:var(--text-muted);">Set the betting lines (Spread & Total) for upcoming matches.</p>
+
+                    <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                        <select id="odds-week-select" class="form-control" style="max-width:150px;"
+                            onchange="loadOddsEditor()">
+                            <option value="1">Week 1</option>
+                            <option value="2">Week 2</option>
+                            <option value="3">Week 3</option>
+                            <option value="4">Week 4</option>
+                            <option value="5">Week 5</option>
+                            <option value="6">Week 6</option>
+                            <option value="7">Week 7</option>
+                            <option value="8">Week 8</option>
+                            <option value="9">Week 9</option>
+                        </select>
+                        <select id="odds-game-select" class="form-control" style="max-width:200px;"
+                            onchange="loadOddsEditor()">
+                            <option value="all">All Games</option>
+                            <option value="Rocket League">Rocket League</option>
+                            <option value="Overwatch 2">Overwatch 2</option>
+                            <option value="Smash Bros">Smash Bros</option>
+                            <option value="Valorant">Valorant</option>
+                        </select>
+                    </div>
+
+                    <div id="odds-editor-list" style="display:grid; gap:1rem;"></div>
+
+                    <button class="btn btn-primary" style="margin-top:2rem;" onclick="saveOdds()">Save Odds</button>
+                </div>
             </main>
         </div>
     </div>
@@ -420,7 +454,9 @@
             initRosterDropdown();
             loadReports();
             renderNewsEditor(); // Init News Editor
+            renderNewsEditor(); // Init News Editor
             renderWatchEditor(); // Init Watch Editor
+            loadOddsEditor(); // Init Odds Editor
         }
 
         // --- WATCH KEY EDITOR LOGIC ---

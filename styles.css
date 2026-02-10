@@ -1710,10 +1710,16 @@ select:focus {
     border-bottom: 1px solid #334155;
     position: sticky;
     top: 70px;
-    /* Below main header */
     z-index: 90;
-    padding: 1rem 0;
+    padding: 0;
+    /* Remove padding to flush with rounded corners if needed, or keep */
     margin-bottom: 2rem;
+    border-radius: 12px;
+    /* Rounded Corners */
+    overflow: hidden;
+    /* Clip content */
+    border: 1px solid #334155;
+    /* Add border definition */
 }
 
 .page-title {
@@ -1721,8 +1727,10 @@ select:focus {
     font-size: 2rem;
     color: white;
     text-transform: uppercase;
-    margin-bottom: 1rem;
-    padding: 0 1rem;
+    margin: 0;
+    /* Clear margin for cleaner layout */
+    padding: 1rem 1.5rem;
+    /* Add padding inside */
 }
 
 /* Week Selector */
@@ -1731,7 +1739,7 @@ select:focus {
     align-items: center;
     background: #0f172a;
     border-top: 1px solid #334155;
-    border-bottom: 1px solid #334155;
+    /* border-bottom removed if last item */
     position: relative;
 }
 
@@ -1741,9 +1749,7 @@ select:focus {
     overflow-x: auto;
     scroll-behavior: smooth;
     scrollbar-width: none;
-    /* Firefox */
     -ms-overflow-style: none;
-    /* IE/Edge */
 }
 
 .week-selector::-webkit-scrollbar {
@@ -1752,12 +1758,14 @@ select:focus {
 
 .week-item {
     flex: 0 0 auto;
-    padding: 0.75rem 1.5rem;
+    padding: 0.75rem 1rem;
+    /* Reduced padding */
     text-align: center;
     cursor: pointer;
     border-right: 1px solid #334155;
     transition: background 0.2s;
-    min-width: 100px;
+    min-width: 80px;
+    /* Reduced width */
 }
 
 .week-item:hover {
@@ -1765,13 +1773,17 @@ select:focus {
 }
 
 .week-item.active {
-    background: white;
-    color: #0f172a;
+    background: #334155;
+    /* Dimmer highlight */
+    color: white;
+    border-bottom: 2px solid var(--accent-blue);
+    /* Add accent indicator */
 }
 
 .week-item.active .week-label,
 .week-item.active .week-date {
-    color: #0f172a;
+    color: white;
+    /* Ensure text matches */
 }
 
 .week-label {
@@ -1825,7 +1837,9 @@ select:focus {
 
 /* Schedule List View */
 .schedule-list-header {
-    display: grid;
+    display: none;
+    /* Hidden for new card layout */
+    /* Adjusted grid to give space for padding */
     grid-template-columns: 3fr 1fr 1fr 1fr;
     padding: 0.75rem 1rem;
     background: #1e293b;
@@ -1851,51 +1865,103 @@ select:focus {
     background: #2a384b;
 }
 
+/* Matchup Column - 3 Column Grid */
 .col-matchup {
     display: grid;
-    grid-template-columns: 1fr 30px 1fr;
+    /* Team A | @ | Team B */
+    grid-template-columns: 1fr 40px 1fr;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0;
+    padding-right: 2rem;
+    height: 100%;
 }
 
+/* Match Team Container - Flexbox for Alignment */
+/* Match Team Container - Flexbox for Alignment */
 .match-team {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    /* Reduced from 0.75rem */
+    height: 100%;
     min-width: 0;
+    /* Prevent overflow */
 }
 
-/* Team A: Right Align, Text -> Logo */
+/* Team A: Right aligned, Text then Logo */
 .col-matchup .match-team:first-child {
+    flex-direction: row;
     justify-content: flex-end;
-    flex-direction: row-reverse;
+    /* Push to right */
+}
+
+/* Team A Text */
+.col-matchup .match-team:first-child span {
     text-align: right;
-}
-
-/* Team B: Left Align, Logo -> Text (Default) */
-.col-matchup .match-team:last-child {
-    justify-content: flex-start;
-    text-align: left;
-}
-
-.match-team img {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-}
-
-.match-team span {
     font-weight: 700;
     font-size: 1.1rem;
     line-height: 1.1;
+    order: 1;
+    /* Text first */
 }
 
+/* Team A Logo */
+.col-matchup .match-team:first-child .team-logo {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    order: 2;
+    /* Logo second */
+}
+
+/* @ Symbol */
 .match-at {
     justify-self: center;
     color: var(--text-muted);
     font-size: 0.9rem;
     font-weight: 700;
+    text-align: center;
 }
+
+/* Team B: Left aligned, Logo then Text */
+.col-matchup .match-team:last-child {
+    flex-direction: row;
+    justify-content: flex-start;
+    /* Push to left */
+}
+
+/* Team B Logo */
+.col-matchup .match-team:last-child .team-logo {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    order: 1;
+    /* Logo first */
+}
+
+/* Team B Text */
+.col-matchup .match-team:last-child span {
+    text-align: left;
+    font-weight: 700;
+    font-size: 1.1rem;
+    line-height: 1.1;
+    order: 2;
+    /* Text second */
+}
+
+.match-team img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    /* Remove inline gap */
+}
+
+/* Removed old flex/row-reverse logic for desktop since we use explicit grid columns now */
 
 .col-time {
     font-family: var(--font-body);
@@ -1965,12 +2031,39 @@ select:focus {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
+        padding-right: 0;
+        /* Reset padding */
+    }
+
+    .match-team {
+        display: flex;
+        /* Restore flexbox for mobile */
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Reset Grid Column assignments for mobile */
+    .col-matchup .match-team:first-child span,
+    .col-matchup .match-team:last-child span,
+    .col-matchup .match-team:first-child .team-logo,
+    .col-matchup .match-team:last-child .team-logo {
+        grid-column: auto;
+        padding: 0;
+        text-align: left;
+    }
+
+    .col-matchup .match-team:first-child .team-logo,
+    .col-matchup .match-team:last-child .team-logo {
+        width: 32px;
+        height: 32px;
+        justify-self: auto;
     }
 
     /* Reset Team A alignment on mobile */
     .col-matchup .match-team:first-child {
         justify-content: flex-start;
         flex-direction: row;
+        /* Normal order: Logo -> Text */
         text-align: left;
     }
 
@@ -1979,10 +2072,240 @@ select:focus {
         /* Hide 'vs' text, implied by stack */
     }
 
+
     .col-time,
     .col-tv,
     .col-result {
         color: var(--text-muted);
         font-size: 0.9rem;
+    }
+}
+
+/* --- ESPN Style Schedule Redesign --- */
+
+.schedule-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.espn-schedule-card {
+    background: var(--bg-card);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.espn-schedule-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    border-color: #475569;
+}
+
+/* Column 1: Teams & Time */
+.espn-col-teams {
+    padding: 1.25rem;
+    border-right: 1px solid #334155;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.game-header {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.game-header .network {
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.team-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.team-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.team-row img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.team-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.team-rank {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-right: 0.25rem;
+}
+
+.team-name {
+    font-family: var(--font-head);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+}
+
+.team-record {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* Column 2: Info (Odds/Location) */
+.espn-col-info {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid #334155;
+    background: rgba(15, 23, 42, 0.3);
+}
+
+.info-location {
+    font-size: 0.9rem;
+    color: white;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.info-city {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.odds-box {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 0.75rem;
+    text-align: center;
+}
+
+.odds-line {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.odds-line strong {
+    color: white;
+}
+
+/* Column 3: Actions */
+.espn-col-actions {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.btn-gamecast {
+    background: transparent;
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+    padding: 0.5rem 1.5rem;
+    font-family: var(--font-head);
+    font-weight: 700;
+    border-radius: 20px;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    width: 100%;
+    text-align: center;
+    max-width: 140px;
+}
+
+.btn-gamecast:hover {
+    background: var(--accent-blue);
+    color: #0f172a;
+}
+
+.team-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.team-link-group {
+    font-size: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.team-link-group strong {
+    color: white;
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 2px;
+}
+
+.team-link-group a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.team-link-group a:hover {
+    color: var(--accent-blue);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .espn-schedule-card {
+        grid-template-columns: 1fr;
+        border-radius: 8px;
+    }
+
+    .espn-col-teams {
+        border-right: none;
+        border-bottom: 1px solid #334155;
+    }
+
+    .espn-col-info {
+        border-right: none;
+        border-bottom: 1px solid #334155;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+    }
+
+    .odds-box {
+        margin-left: 1rem;
+        min-width: 140px;
     }
 }

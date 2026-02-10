@@ -1477,42 +1477,143 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Match Details URL
                 const detailsUrl = `match-details.html?week=${match.week || currentWeek}&game=${encodeURIComponent(match.game)}&teamA=${encodeURIComponent(match.teamA)}&teamB=${encodeURIComponent(match.teamB)}`;
 
-                // Create Row HTML
-                const row = document.createElement('div');
-                row.className = 'schedule-row';
-                row.onclick = (e) => {
-                    if (e.target.tagName !== 'A') window.location.href = detailsUrl;
-                };
-                row.style.cursor = 'pointer';
-
+                // --- Real Data & Mock Mix ---
                 const teamALogo = getLogoImg(match.teamA);
                 const teamBLogo = getLogoImg(match.teamB);
 
-                // Time Logic
-                const timeDisplay = match.status === 'LIVE' ? '<span style="color:var(--accent-red); font-weight:700;">LIVE</span>' : match.time;
+                // Real Records
+                const totalStandings = calculateStandings('all');
+                const gameStandings = calculateStandings(match.game);
 
-                row.innerHTML = `
-                    <div class="row-meta">${match.game}</div>
-                    <div class="col-matchup">
-                        <div class="match-team">
-                            <div class="team-logo">${teamALogo}</div>
-                            <span>${match.teamA}</span>
+                const getRealRecord = (teamName) => {
+                    const total = totalStandings.find(t => t.team === teamName) || { wins: 0, losses: 0 };
+                    const game = gameStandings.find(t => t.team === teamName) || { wins: 0, losses: 0 };
+
+                    let shortGame = 'Conf';
+                    if (match.game === 'Rocket League') shortGame = 'RL';
+                    else if (match.game === 'Valorant') shortGame = 'Val';
+                    else if (match.game === 'Overwatch 2') shortGame = 'OW';
+                    else if (match.game === 'Smash Bros') shortGame = 'Smash';
+
+                    return `(${total.wins}-${total.losses}, ${game.wins}-${game.losses} ${shortGame})`;
+                };
+
+                const recA = getRealRecord(match.teamA);
+                const recB = getRealRecord(match.teamB);
+
+                // Mock Ranks/Odds (Keep)
+                const getMockRank = () => {
+                    return Math.random() > 0.7 ? `<span class="team-rank">#${Math.floor(Math.random() * 25) + 1}</span>` : '';
+                };
+
+                // Odds Logic (Real > Mock)
+                const getOdds = () => {
+                    // Try LocalStorage first
+                    try {
+                        const savedOdds = JSON.parse(localStorage.getItem('pec_match_odds') || '{}');
+                        const id = `${match.week}-${match.game}-${match.teamA}-${match.teamB}`.replace(/\s+/g, '');
+                        if (savedOdds[id] && (savedOdds[id].spread || savedOdds[id].total)) {
+                            return {
+                                line: savedOdds[id].spread || '-',
+                                total: savedOdds[id].total || '-'
+                            };
+                        }
+                    } catch (e) { }
+
+                    // Fallback to Mock
+                    const favorite = Math.random() > 0.5 ? match.teamA : match.teamB;
+                    const shortFav = favorite.split(' ').pop().substring(0, 3).toUpperCase();
+                    const spread = (Math.random() * 12 + 1).toFixed(1);
+                    const total = (Math.floor(Math.random() * 30) + 130) + 0.5;
+                    return { line: `${shortFav} -${spread}`, total };
+                };
+
+                const mockOdds = getOdds();
+                const rankA = getMockRank();
+                const rankB = getMockRank();
+
+                // Best of X Logic
+                let seriesType = 'Best of 3'; // Default
+                if (match.game === 'Rocket League' || match.game === 'Overwatch 2') {
+                    seriesType = 'Best of 5';
+                }
+
+                // Construct Card HTML
+                const card = document.createElement('div');
+                card.className = 'espn-schedule-card';
+                card.innerHTML = `
+                    <!-- Col 1: Teams & Time -->
+                    <div class="espn-col-teams">
+                        <div class="game-header">
+                            <span style="color:#fff;">${match.time || 'TBD'}</span> 
+                            <span style="color:var(--text-muted)">•</span>
+                            <span class="network">${channelName.replace('TV ', '')}</span>
                         </div>
-                        <div class="match-at">@</div>
-                        <div class="match-team">
-                            <div class="team-logo">${teamBLogo}</div>
-                            <span>${match.teamB}</span>
+                        <div class="team-rows">
+                            <!-- Team A -->
+                            <div class="team-row">
+                                <div style="width:40px; text-align:center;">${teamALogo}</div>
+                                <div class="team-info">
+                                    <div style="display:flex; align-items:center;">
+                                        ${rankA}
+                                        <span class="team-name" style="${match.winner === match.teamA ? 'color:var(--accent-blue);' : ''}">${match.teamA}</span>
+                                    </div>
+                                    <span class="team-record">${recA}</span>
+                                </div>
+                                ${match.status === 'FINAL' ? `<span style="margin-left:auto; font-size:1.5rem; font-weight:700; color:${match.winner === match.teamA ? 'white' : 'var(--text-muted)'}">${scoreA}</span>` : ''}
+                            </div>
+                            <!-- Team B -->
+                            <div class="team-row">
+                                <div style="width:40px; text-align:center;">${teamBLogo}</div>
+                                <div class="team-info">
+                                    <div style="display:flex; align-items:center;">
+                                        ${rankB}
+                                        <span class="team-name" style="${match.winner === match.teamB ? 'color:var(--accent-blue);' : ''}">${match.teamB}</span>
+                                    </div>
+                                    <span class="team-record">${recB}</span>
+                                </div>
+                                ${match.status === 'FINAL' ? `<span style="margin-left:auto; font-size:1.5rem; font-weight:700; color:${match.winner === match.teamB ? 'white' : 'var(--text-muted)'}">${scoreB}</span>` : ''}
+                            </div>
                         </div>
                     </div>
-                    <div class="col-time">${timeDisplay}</div>
-                    <div class="col-tv">
-                        <span class="tv-badge">TV</span> ${channelName}
+
+                    <!-- Col 2: Info -->
+                    <div class="espn-col-info">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-bottom:0.5rem;">
+                            <div>
+                                <div class="info-location">${match.game}</div>
+                                <div class="info-city">${seriesType}</div>
+                            </div>
+                            <a href="${detailsUrl}" class="btn-gamecast" style="padding:0.25rem 1rem; font-size:0.8rem; min-width:80px;">Details</a>
+                        </div>
+                        ${match.status !== 'FINAL' ? `
+                        <div class="odds-box" style="width:100%; display:flex; justify-content:center; align-items:center; gap:0.75rem;">
+                            <div class="odds-line">Spread: <strong>${mockOdds.line}</strong></div>
+                            <span style="color:var(--text-muted)">•</span>
+                            <div class="odds-line">Total: <strong>${mockOdds.total}</strong></div>
+                        </div>` : `<div class="odds-box" style="width:100%"><div class="odds-line" style="color:var(--accent-blue)">FINAL SCORE</div></div>`}
                     </div>
-                    <div class="col-result ${resultClass}">
-                        ${resultText}
+
+                    <!-- Col 3: Actions -->
+                    <div class="espn-col-actions">
+                        <div class="team-links">
+                            <div class="team-link-group">
+                                <strong>${match.teamA}</strong>
+                                <a href="team.html?id=${encodeURIComponent(match.teamA)}#roster">Roster</a> • 
+                                <a href="team.html?id=${encodeURIComponent(match.teamA)}#stats">Stats</a> • 
+                                <a href="team.html?id=${encodeURIComponent(match.teamA)}#schedule">Schedule</a>
+                            </div>
+                            <div class="team-link-group">
+                                <strong>${match.teamB}</strong>
+                                <a href="team.html?id=${encodeURIComponent(match.teamB)}#roster">Roster</a> • 
+                                <a href="team.html?id=${encodeURIComponent(match.teamB)}#stats">Stats</a> • 
+                                <a href="team.html?id=${encodeURIComponent(match.teamB)}#schedule">Schedule</a>
+                            </div>
+                        </div>
                     </div>
                 `;
-                scheduleListContainer.appendChild(row);
+
+                scheduleListContainer.appendChild(card);
             });
         };
 
@@ -3224,8 +3325,147 @@ window.renderPlayerPage = () => {
     }
 };
 
+// --- Team Page Tab Logic ---
+const initTeamPageTabs = () => {
+    const tabs = document.querySelectorAll('.team-tab');
+    if (tabs.length === 0) return;
+
+    const views = document.querySelectorAll('.team-view');
+
+    const switchTab = (tabName) => {
+        // Update Tabs
+        tabs.forEach(t => {
+            if (t.dataset.tab === tabName) t.classList.add('active');
+            else t.classList.remove('active');
+        });
+
+        // Update Views
+        views.forEach(v => {
+            if (v.id === `view-${tabName}` || (tabName === 'schedule' && v.id === 'view-overview')) {
+                v.style.display = 'block';
+                v.classList.add('active');
+            } else {
+                v.style.display = 'none';
+                v.classList.remove('active');
+            }
+        });
+    };
+
+    // Event Listeners
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            switchTab(target);
+            // Optional: Update URL hash without scroll
+            history.replaceState(null, null, `#${target}`);
+        });
+    });
+
+    // Handle Hash on Load
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+        if (['schedule', 'roster', 'stats'].includes(hash)) {
+            switchTab(hash);
+        }
+    }
+};
+
 // Init
 window.addEventListener('DOMContentLoaded', () => {
     // Other inits defined above...
-    window.renderPlayerPage();
+    if (window.renderPlayerPage) window.renderPlayerPage();
+    initTeamPageTabs();
 });
+
+// --- ODDS EDITOR LOGIC ---
+const loadOddsEditor = () => {
+    const week = parseInt(document.getElementById('odds-week-select').value);
+    const gameFilter = document.getElementById('odds-game-select').value;
+    const container = document.getElementById('odds-editor-list');
+
+    if (!container) return; // Guard for non-admin pages
+
+    // Load saved odds
+    let savedOdds = {};
+    try {
+        savedOdds = JSON.parse(localStorage.getItem('pec_match_odds') || '{}');
+    } catch (e) {
+        console.warn('Error loading odds', e);
+    }
+
+    // Find matches
+    const weekData = scheduleData.find(w => w.week === week);
+    if (!weekData || !weekData.matches) {
+        container.innerHTML = '<p class="text-muted">No matches found for this week.</p>';
+        return;
+    }
+
+    let matches = weekData.matches;
+    if (gameFilter !== 'all') {
+        matches = matches.filter(m => m.game === gameFilter);
+    }
+
+    if (matches.length === 0) {
+        container.innerHTML = '<p class="text-muted">No matches found.</p>';
+        return;
+    }
+
+    container.innerHTML = matches.map(m => {
+        const id = `${m.week}-${m.game}-${m.teamA}-${m.teamB}`.replace(/\s+/g, '');
+        const current = savedOdds[id] || {};
+
+        return `
+        <div class="editor-card" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-weight:bold;">${m.teamA} vs ${m.teamB}</div>
+                <div style="font-size:0.8rem; color:#94a3b8;">${m.game} • Week ${m.week}</div>
+            </div>
+            <div style="display:flex; gap:1rem;">
+                <div class="form-group" style="margin:0;">
+                    <label style="font-size:0.8rem; margin-bottom:0.25rem;">Spread</label>
+                    <input type="text" class="form-control odds-input-spread" data-id="${id}" value="${current.spread || ''}" placeholder="-4.5" style="width:80px; text-align:center;">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label style="font-size:0.8rem; margin-bottom:0.25rem;">Total</label>
+                    <input type="text" class="form-control odds-input-total" data-id="${id}" value="${current.total || ''}" placeholder="145.5" style="width:80px; text-align:center;">
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+};
+
+const saveOdds = () => {
+    // Load existing to merge (don't overwrite other weeks)
+    let savedOdds = {};
+    try {
+        savedOdds = JSON.parse(localStorage.getItem('pec_match_odds') || '{}');
+    } catch (e) { }
+
+    const spreads = document.querySelectorAll('.odds-input-spread');
+    const totals = document.querySelectorAll('.odds-input-total');
+
+    let count = 0;
+
+    spreads.forEach((input, index) => {
+        const id = input.dataset.id;
+        const spreadVal = input.value.trim();
+        const totalVal = totals[index].value.trim();
+
+        if (spreadVal || totalVal) {
+            // Ensure object exists
+            if (!savedOdds[id]) savedOdds[id] = {};
+
+            savedOdds[id].spread = spreadVal;
+            savedOdds[id].total = totalVal;
+            count++;
+        }
+    });
+
+    localStorage.setItem('pec_match_odds', JSON.stringify(savedOdds));
+    alert(`Saved odds for ${count} matches!`);
+};
+
+// Expose globally
+window.loadOddsEditor = loadOddsEditor;
+window.saveOdds = saveOdds;
