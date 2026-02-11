@@ -1998,10 +1998,10 @@
             // If matches exist, group them
             if (weekData.matches && weekData.matches.length > 0) {
                 weekData.matches.forEach(m => {
-                    // Create a unique key for the matchup (A vs B)
-                    // We simply assume the first time we see A vs B, it's the series definition
-                    // Note: This relies on the fact that our data is generated in blocks of 4
-                    const key = `${m.teamA}-${m.teamB}`;
+                    // Create a unique key for the matchup (A vs B) - canonicalize by sorting
+                    const teams = [m.teamA, m.teamB].sort();
+                    const key = `${teams[0]}-${teams[1]}`;
+                    console.log(`Checking match: ${key} (Week ${week})`);
                     if (!seen.has(key)) {
                         seen.add(key);
                         pairings.push({ teamA: m.teamA, teamB: m.teamB });
@@ -2163,8 +2163,8 @@
                     scheduleData.forEach(w => {
                         w.matches.forEach(m => {
                             // Validate Week Type for comparison
-                            // Ensure we don't perform strict check on potential string/int mismatch
-                            if (parseInt(w.week) !== parseInt(week)) {
+                            // EXCLUDE the current week entirely to prevent duplicates
+                            if (parseInt(m.week) !== parseInt(week)) {
                                 recoveredMatches.push({
                                     id: m.id,
                                     week: parseInt(m.week),
