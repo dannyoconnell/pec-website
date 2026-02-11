@@ -87,7 +87,9 @@ export default async (req, context) => {
         if (payload.replaceWeek && payload.week && payload.matches) {
             console.log("Replacing Schedule for Week:", payload.week);
             // specific week delete
-            await sql`DELETE FROM matches WHERE week = ${payload.week}`;
+            const weekInt = parseInt(payload.week);
+            if (isNaN(weekInt)) throw new Error("Invalid Week Identifier");
+            await sql`DELETE FROM matches WHERE week = ${weekInt}`;
 
             // Bulk Insert
             for (const m of payload.matches) {
