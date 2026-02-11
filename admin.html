@@ -2100,8 +2100,12 @@
                     // using global generateSeries function from script.js
                     // Standard Time: 20:00
                     const seriesMatches = generateSeries(teamA, teamB, '20:00');
-                    // Add week info
-                    seriesMatches.forEach(m => m.week = week);
+                    // Add week info and sanitize scores for DB (convert '-' to null)
+                    seriesMatches.forEach(m => {
+                        m.week = week;
+                        if (m.scoreA === '-') m.scoreA = null;
+                        if (m.scoreB === '-') m.scoreB = null;
+                    });
 
                     newMatches = [...newMatches, ...seriesMatches];
                 }
