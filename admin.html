@@ -1992,7 +1992,7 @@
             };
 
             // Group matches into pairings (Series)
-            const pairings = [];
+            let pairings = [];
             const seen = new Set();
 
             // If matches exist, group them
@@ -2001,15 +2001,24 @@
                     // Create a unique key for the matchup (A vs B) - canonicalize by sorting
                     const teams = [m.teamA, m.teamB].sort();
                     const key = `${teams[0]}-${teams[1]}`;
-                    console.log(`Checking match: ${key} (Week ${week})`);
+
                     if (!seen.has(key)) {
                         seen.add(key);
                         pairings.push({ teamA: m.teamA, teamB: m.teamB });
                     }
                 });
-                // Default clean slate if no pairings found (Empty DB)
-                // Add one empty row so user can start
-                pairings.push({ teamA: 'Baylor', teamB: 'Boise State' });
+            }
+
+            // ENFORCE STATIC 5 PAIRINGS
+            // Fill with existing data, then pad with defaults
+            const staticPairings = [];
+            for (let i = 0; i < 5; i++) {
+                if (pairings[i]) {
+                    staticPairings.push(pairings[i]);
+                } else {
+                    // Default for empty slots
+                    staticPairings.push({ teamA: 'Baylor', teamB: 'Boise State' });
+                }
             }
 
             // --- Date Input ---
@@ -2021,7 +2030,7 @@
                 </div>
             `;
 
-            container.innerHTML = dateInputHtml + pairings.map((p, i) => `
+            container.innerHTML = dateInputHtml + staticPairings.map((p, i) => `
                 <div class="editor-card" style="padding:1rem;">
                     <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">Series Pairing ${i + 1}</h4>
                     <div style="display:flex; gap:1rem; align-items:center;">
@@ -2038,57 +2047,14 @@
                                 ${generateTeamOptions(p.teamB)}
                             </select>
                         </div>
-                         <button class="btn btn-outline" onclick="removeSeriesRow(this)" style="color:red; border-color:red; margin-top: 1.2rem;">X</button>
+                         <!-- Static Editor: No Remove Button -->
                     </div>
                 </div>
             `).join('');
 
-            // Add "Add Pairing" button if not exists
-            if (!document.getElementById('add-pairing-btn')) {
-                const addBtn = document.createElement('button');
-                addBtn.className = 'btn btn-outline';
-                addBtn.innerText = '+ Add New Pairing';
-                addBtn.id = 'add-pairing-btn';
-                addBtn.style.marginTop = '1rem';
-                addBtn.onclick = () => addSeriesRow(week);
-                container.after(addBtn);
-            }
+            // Static Editor: No "Add Pairing" Button needed
         }
 
-        function addSeriesRow(week) {
-            const container = document.getElementById('schedule-editor-list');
-            const teamList = Object.keys(teamLogos).sort();
-            const generateTeamOptions = () => teamList.map(t => `<option value="${t}">${t}</option>`).join('');
-            const i = container.children.length; // Approximate index
-
-            const div = document.createElement('div');
-            div.className = 'editor-card';
-            div.style.padding = '1rem';
-            div.innerHTML = `
-                <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">New Series Pairing</h4>
-                <div style="display:flex; gap:1rem; align-items:center;">
-                    <div style="flex:1">
-                        <label style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Team A</label>
-                        <select class="form-control" id="sch-teamA-${week}-${i}">
-                            ${generateTeamOptions()}
-                        </select>
-                    </div>
-                    <span style="font-weight:bold; color:#ef4444;">VS</span>
-                    <div style="flex:1">
-                        <label style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.2rem;">Team B</label>
-                        <select class="form-control" id="sch-teamB-${week}-${i}">
-                            ${generateTeamOptions()}
-                        </select>
-                    </div>
-                    <button class="btn btn-outline" onclick="removeSeriesRow(this)" style="color:red; border-color:red; margin-top: 1.2rem;">X</button>
-                </div>
-             `;
-            container.appendChild(div);
-        }
-
-        function removeSeriesRow(btn) {
-            btn.closest('.editor-card').remove();
-        }
 
         async function saveSchedule() {
             const week = parseInt(document.getElementById('admin-week-select').value);
