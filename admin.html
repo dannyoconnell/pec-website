@@ -2007,13 +2007,21 @@
                         pairings.push({ teamA: m.teamA, teamB: m.teamB });
                     }
                 });
-            } else {
                 // Default clean slate if no pairings found (Empty DB)
                 // Add one empty row so user can start
                 pairings.push({ teamA: 'Baylor', teamB: 'Boise State' });
             }
 
-            container.innerHTML = pairings.map((p, i) => `
+            // --- Date Input ---
+            const weekDate = weekData.date || '';
+            const dateInputHtml = `
+                <div style="margin-bottom: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                    <label style="color: #94a3b8; font-size: 0.9rem;">Week Starting Date (Display Label)</label>
+                    <input type="text" id="admin-week-date" class="form-control" value="${weekDate}" placeholder="e.g. Feb 16">
+                </div>
+            `;
+
+            container.innerHTML = dateInputHtml + pairings.map((p, i) => `
                 <div class="editor-card" style="padding:1rem;">
                     <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">Series Pairing ${i + 1}</h4>
                     <div style="display:flex; gap:1rem; align-items:center;">
@@ -2084,6 +2092,7 @@
 
         async function saveSchedule() {
             const week = parseInt(document.getElementById('admin-week-select').value);
+            const dateVal = document.getElementById('admin-week-date').value;
             const container = document.getElementById('schedule-editor-list');
             const rows = container.querySelectorAll('.editor-card');
 
@@ -2103,6 +2112,7 @@
                     // Add week info and sanitize scores for DB (convert '-' to null)
                     seriesMatches.forEach(m => {
                         m.week = week;
+                        m.date = dateVal; // Save the updated date
                         if (m.scoreA === '-') m.scoreA = null;
                         if (m.scoreB === '-') m.scoreB = null;
                     });
