@@ -2148,11 +2148,12 @@
                     let recoveredMatches = [];
                     scheduleData.forEach(w => {
                         w.matches.forEach(m => {
-                            // Don't include the week we are replacing
-                            if (w.week !== week) {
+                            // Validate Week Type for comparison
+                            // Ensure we don't perform strict check on potential string/int mismatch
+                            if (parseInt(w.week) !== parseInt(week)) {
                                 recoveredMatches.push({
                                     id: m.id,
-                                    week: m.week,
+                                    week: parseInt(m.week),
                                     date: w.date,
                                     team_a: m.teamA,
                                     team_b: m.teamB,
@@ -2166,6 +2167,8 @@
                             }
                         });
                     });
+
+                    console.log(`Recovered ${recoveredMatches.length} matches (excluding Week ${week})`);
 
                     // Add New Matches (snake_case conversion)
                     const newFlatMatches = newMatches.map((m, idx) => ({
