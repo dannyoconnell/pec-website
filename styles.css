@@ -1743,10 +1743,9 @@ select:focus {
 /* Week Selector */
 .week-selector-container {
     display: flex;
-    align-items: center;
-    background: #0f172a;
-    border-top: 1px solid #334155;
-    /* border-bottom removed if last item */
+    align-items: stretch;
+    background: var(--bg-dark);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
     position: relative;
 }
 
@@ -1765,64 +1764,67 @@ select:focus {
 
 .week-item {
     flex: 0 0 auto;
-    padding: 0.75rem 1rem;
-    /* Reduced padding */
+    padding: 1rem 1.25rem;
     text-align: center;
     cursor: pointer;
-    border-right: 1px solid #334155;
-    transition: background 0.2s;
-    min-width: 80px;
-    /* Reduced width */
+    border-bottom: 3px solid transparent;
+    transition: border-color 0.2s, color 0.2s;
+    min-width: 90px;
 }
 
-.week-item:hover {
-    background: #1e293b;
+.week-item:hover .week-label,
+.week-item:hover .week-date {
+    color: var(--text-main);
 }
 
 .week-item.active {
-    background: #334155;
-    /* Dimmer highlight */
-    color: white;
-    border-bottom: 2px solid var(--accent-blue);
-    /* Add accent indicator */
+    border-bottom: 3px solid var(--accent-red);
 }
 
-.week-item.active .week-label,
+.week-item.active .week-label {
+    color: white;
+    font-weight: 700;
+}
+
 .week-item.active .week-date {
     color: white;
-    /* Ensure text matches */
 }
 
 .week-label {
     display: block;
     font-family: var(--font-head);
-    font-weight: 700;
-    font-size: 0.9rem;
+    font-weight: 600;
+    font-size: 0.8rem;
     text-transform: uppercase;
     color: var(--text-muted);
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
 }
 
 .week-date {
     display: block;
     font-family: var(--font-body);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: 400;
+    margin-top: 0.15rem;
+    transition: color 0.2s;
 }
 
 .scroll-btn {
-    background: #1e293b;
+    background: transparent;
     border: none;
-    color: white;
-    font-size: 1.5rem;
-    padding: 0 1rem;
+    color: var(--text-muted);
+    font-size: 1.4rem;
+    padding: 0 0.75rem;
     cursor: pointer;
-    height: 100%;
-    z-index: 2;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
 }
 
 .scroll-btn:hover {
-    background: #334155;
+    color: var(--text-main);
 }
 
 /* Filters Bar */
