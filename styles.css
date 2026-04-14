@@ -524,6 +524,7 @@ body {
 .week-selector {
     display: flex;
     gap: 1rem;
+    margin-left: auto;
 }
 
 .filters {
