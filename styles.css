@@ -507,8 +507,8 @@ body {
 }
 
 .section-header {
+    position: relative;
     display: flex;
-    justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
     border-bottom: 2px solid #334155;
@@ -519,7 +519,13 @@ body {
     font-family: var(--font-head);
     font-size: 2rem;
     text-transform: uppercase;
-    flex: 1;
+}
+
+.section-header .week-selector {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .week-selector {
