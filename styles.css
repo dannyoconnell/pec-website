@@ -1,14 +1,20 @@
 :root {
-    --bg-dark: #0f172a;
-    --bg-card: #1e293b;
-    --bg-header: #020617;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --accent-red: #ef4444;
-    --accent-blue: #38bdf8;
+    --bg-dark: #150C05;
+    --bg-card: #1C110A;
+    --bg-header: #0D0702;
+    --text-main: #E7E5DF;
+    --text-muted: #BDB9B3;
+    --accent-red: #05368A;
+    --accent-blue: #0C52C5;
+    --border-color: #2D1B0E;
     --font-head: 'Chakra Petch', sans-serif;
     --font-logo: 'Teko', sans-serif;
     --font-body: 'Inter', sans-serif;
+    /* Brand palette */
+    --color-primary: #05368A;
+    --color-platinum: #E7E5DF;
+    --color-silver: #BDB9B3;
+    --color-licorice: #1C110A;
 }
 
 * {
@@ -88,7 +94,7 @@ body {
 
 /* Game Filter Nav */
 .game-nav {
-    background: #1e293b;
+    background: #1C110A;
     /* Slightly lighter than header */
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     padding: 0;
@@ -145,7 +151,7 @@ body {
 }
 
 .btn-primary:hover {
-    background-color: #dc2626;
+    background-color: #0646B5;
 }
 
 .btn-outline {
@@ -164,7 +170,7 @@ body {
     background: #000;
     display: flex;
     height: 40px;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #2D1B0E;
     overflow: hidden;
 }
 
@@ -270,7 +276,7 @@ body {
     flex: 1;
     /* Takes ~33% */
     background: var(--bg-card);
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
@@ -279,7 +285,7 @@ body {
 
 .standings-header {
     padding: 1rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #2D1B0E;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -397,7 +403,7 @@ body {
     background: var(--bg-card);
     display: flex;
     flex-direction: column;
-    /* border: 1px solid #334155; Removed border */
+    /* border: 1px solid #2D1B0E; Removed border */
 }
 
 /* Remove old specific overrides */
@@ -511,7 +517,7 @@ body {
     display: flex;
     align-items: center;
     margin-bottom: 2rem;
-    border-bottom: 2px solid #334155;
+    border-bottom: 2px solid #2D1B0E;
     padding-bottom: 1rem;
 }
 
@@ -541,7 +547,7 @@ body {
 select {
     background: var(--bg-card);
     color: var(--text-main);
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     padding: 0.5rem 1rem;
     border-radius: 4px;
     font-family: var(--font-body);
@@ -575,7 +581,7 @@ select:focus {
 
 .match-card {
     background: var(--bg-card);
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     border-radius: 8px;
     padding: 1rem;
     transition: transform 0.2s;
@@ -639,9 +645,9 @@ select:focus {
 
 /* Footer */
 .main-footer {
-    background: #020617;
+    background: #0D0702;
     padding: 3rem 1rem;
-    border-top: 1px solid #334155;
+    border-top: 1px solid #2D1B0E;
 }
 
 .footer-inner {
@@ -831,7 +837,7 @@ select:focus {
 
 /* Team Detail Page */
 .team-hero {
-    background: linear-gradient(to right, #0f172a, #1e293b);
+    background: linear-gradient(to right, #150C05, #1C110A);
     padding: 4rem 1rem;
     border-bottom: 4px solid var(--accent-red);
 }
@@ -881,9 +887,9 @@ select:focus {
     align-items: center;
     gap: 4rem;
     padding: 4rem 1rem;
-    background: linear-gradient(to bottom, #1e293b, #0f172a);
+    background: linear-gradient(to bottom, #1C110A, #150C05);
     margin-bottom: 2rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #2D1B0E;
 }
 
 .banner-team {
@@ -933,7 +939,7 @@ select:focus {
 
 /* Match Details Page */
 .match-scoreboard-section {
-    background: linear-gradient(to right, #0f172a, #1e293b);
+    background: linear-gradient(to right, #150C05, #1C110A);
     padding: 3rem 0;
     border-bottom: 4px solid var(--accent-red);
     margin-bottom: 2rem;
@@ -992,7 +998,7 @@ select:focus {
 
 .stats-card {
     background: var(--bg-card);
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     border-radius: 8px;
     padding: 2rem;
 }
@@ -1031,7 +1037,7 @@ select:focus {
 
 .stat-track {
     height: 8px;
-    background: #334155;
+    background: #2D1B0E;
     border-radius: 4px;
     position: relative;
     overflow: hidden;
@@ -1071,8 +1077,8 @@ select:focus {
 
 /* Team Detail Page Header */
 .team-header-container {
-    background: #020617;
-    border-bottom: 1px solid #334155;
+    background: #0D0702;
+    border-bottom: 1px solid #2D1B0E;
     padding-bottom: 0;
 }
 
@@ -1092,7 +1098,7 @@ select:focus {
 .team-hero-logo {
     width: 80px;
     height: 80px;
-    background: #334155;
+    background: #2D1B0E;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1135,7 +1141,7 @@ select:focus {
 }
 
 .team-filter-group select {
-    background: #1e293b;
+    background: #1C110A;
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: white;
     padding: 0.5rem 1rem;
@@ -1149,7 +1155,7 @@ select:focus {
 }
 
 .team-filter-group select:hover {
-    background: #334155;
+    background: #2D1B0E;
 }
 
 .team-tabs {
@@ -1200,7 +1206,7 @@ select:focus {
 
 .player-card {
     background: var(--bg-card);
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     border-radius: 8px;
     overflow: hidden;
     text-align: center;
@@ -1238,7 +1244,7 @@ select:focus {
 /* Watch Page */
 .featured-stream-container {
     background: var(--bg-card);
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     border-radius: 8px;
     overflow: hidden;
     margin-bottom: 2rem;
@@ -1246,11 +1252,11 @@ select:focus {
 
 .stream-match-info {
     padding: 1.5rem;
-    background: linear-gradient(to right, #1e293b, #0f172a);
+    background: linear-gradient(to right, #1C110A, #150C05);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #2D1B0E;
 }
 
 .stream-teams {
@@ -1336,7 +1342,7 @@ select:focus {
 
 .channel-card {
     background: var(--bg-card);
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     border-radius: 8px;
     padding: 2rem;
     text-align: center;
@@ -1383,7 +1389,7 @@ select:focus {
 .team-schedule-table th {
     text-align: left;
     padding: 0.75rem 1rem;
-    background: #334155;
+    background: #2D1B0E;
     color: var(--text-muted);
     font-family: var(--font-head);
     text-transform: uppercase;
@@ -1394,7 +1400,7 @@ select:focus {
 
 .team-schedule-table td {
     padding: 1rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #2D1B0E;
     color: var(--text-main);
 }
 
@@ -1413,7 +1419,7 @@ select:focus {
 }
 
 .result-loss {
-    color: #ef4444;
+    color: #05368A;
     /* Red */
     font-weight: 700;
 }
@@ -1457,14 +1463,14 @@ select:focus {
 }
 
 .val-stats-table td {
-    background: #0f172a;
+    background: #150C05;
     padding: 1rem;
     text-align: center;
     vertical-align: middle;
 }
 
 .val-stats-table tr:hover td {
-    background: #1e293b;
+    background: #1C110A;
 }
 
 .val-map-cell {
@@ -1473,7 +1479,7 @@ select:focus {
     justify-content: center;
     width: 120px;
     height: 60px;
-    background: linear-gradient(45deg, #334155, #1e293b);
+    background: linear-gradient(45deg, #2D1B0E, #1C110A);
     color: white;
     font-family: var(--font-head);
     font-weight: 700;
@@ -1487,14 +1493,14 @@ select:focus {
 }
 
 .win-rate-pill {
-    background: #1e293b;
+    background: #1C110A;
     border-radius: 20px;
     padding: 0.5rem 1rem;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     min-width: 100px;
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
 }
 
 .wr-percent {
@@ -1517,9 +1523,9 @@ select:focus {
 .agent-icon {
     width: 30px;
     height: 30px;
-    background: #334155;
+    background: #2D1B0E;
     border-radius: 4px;
-    border: 1px solid #475569;
+    border: 1px solid #3D2614;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1659,7 +1665,7 @@ select:focus {
 
 .article-header {
     margin-bottom: 2rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #2D1B0E;
     padding-bottom: 1rem;
 }
 
@@ -1714,7 +1720,7 @@ select:focus {
 /* Controls Container */
 .schedule-controls {
     background: var(--bg-card);
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #2D1B0E;
     position: sticky;
     top: 70px;
     z-index: 90;
@@ -1725,7 +1731,7 @@ select:focus {
     /* Rounded Corners */
     overflow: hidden;
     /* Clip content */
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     /* Add border definition */
 }
 
@@ -1835,9 +1841,9 @@ select:focus {
 }
 
 .modern-select {
-    background: #0f172a;
+    background: #150C05;
     color: white;
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     padding: 0.5rem 1rem;
     border-radius: 4px;
     font-family: var(--font-body);
@@ -1851,8 +1857,8 @@ select:focus {
     /* Adjusted grid to give space for padding */
     grid-template-columns: 3fr 1fr 1fr 1fr;
     padding: 0.75rem 1rem;
-    background: #1e293b;
-    border-bottom: 2px solid #334155;
+    background: #1C110A;
+    border-bottom: 2px solid #2D1B0E;
     font-family: var(--font-head);
     font-weight: 700;
     color: var(--text-muted);
@@ -1866,12 +1872,12 @@ select:focus {
     padding: 1rem;
     align-items: center;
     background: var(--bg-card);
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #2D1B0E;
     transition: background 0.2s;
 }
 
 .schedule-row:hover {
-    background: #2a384b;
+    background: #231509;
 }
 
 /* Matchup Column - 3 Column Grid */
@@ -1984,7 +1990,7 @@ select:focus {
 }
 
 .tv-badge {
-    background: #334155;
+    background: #2D1B0E;
     color: white;
     padding: 2px 6px;
     border-radius: 3px;
@@ -2002,7 +2008,7 @@ select:focus {
 }
 
 .result-loss {
-    color: #ef4444;
+    color: #05368A;
 }
 
 .result-pending {
@@ -2100,7 +2106,7 @@ select:focus {
 
 .espn-schedule-card {
     background: var(--bg-card);
-    border: 1px solid #334155;
+    border: 1px solid #2D1B0E;
     border-radius: 8px;
     display: grid;
     grid-template-columns: 2fr 1.5fr 1fr;
@@ -2111,13 +2117,13 @@ select:focus {
 .espn-schedule-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-    border-color: #475569;
+    border-color: #3D2614;
 }
 
 /* Column 1: Teams & Time */
 .espn-col-teams {
     padding: 1.25rem;
-    border-right: 1px solid #334155;
+    border-right: 1px solid #2D1B0E;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -2190,8 +2196,8 @@ select:focus {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    border-right: 1px solid #334155;
-    background: rgba(15, 23, 42, 0.3);
+    border-right: 1px solid #2D1B0E;
+    background: rgba(21, 12, 5, 0.3);
 }
 
 .info-location {
@@ -2208,8 +2214,8 @@ select:focus {
 }
 
 .odds-box {
-    background: #0f172a;
-    border: 1px solid #334155;
+    background: #150C05;
+    border: 1px solid #2D1B0E;
     border-radius: 4px;
     padding: 0.75rem;
     text-align: center;
@@ -2233,7 +2239,7 @@ select:focus {
     justify-content: center;
     align-items: center;
     gap: 1rem;
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(21, 12, 5, 0.5);
 }
 
 .btn-gamecast {
@@ -2256,7 +2262,7 @@ select:focus {
 
 .btn-gamecast:hover {
     background: var(--accent-blue);
-    color: #0f172a;
+    color: #150C05;
 }
 
 .team-links {
@@ -2301,12 +2307,12 @@ select:focus {
 
     .espn-col-teams {
         border-right: none;
-        border-bottom: 1px solid #334155;
+        border-bottom: 1px solid #2D1B0E;
     }
 
     .espn-col-info {
         border-right: none;
-        border-bottom: 1px solid #334155;
+        border-bottom: 1px solid #2D1B0E;
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
