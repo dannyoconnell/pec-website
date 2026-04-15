@@ -1029,11 +1029,11 @@
 
             try {
                 // Fetch group replays
-                const statsUrl = `https://ballchasing.com/api/replays?group=${groupId}`;
-                const statsRes = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(statsUrl)}`);
+                const listUrl = `https://ballchasing.com/api/replays?group=${groupId}`;
+                const listRes = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(listUrl)}`);
 
-                if (!statsRes.ok) throw new Error('Failed to fetch group');
-                const data = await statsRes.json();
+                if (!listRes.ok) throw new Error('Failed to fetch group');
+                const data = await listRes.json();
 
                 if (!data.list || data.list.length === 0) {
                     throw new Error('No replays found in this group.');
@@ -1042,59 +1042,39 @@
                 // Sort by date ascending so Game 1 is first
                 const replays = data.list.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-                // Auto-Score Logic based on goals
-                const headerSpan = document.querySelector(`#report-details-${reportId}`).parentElement.querySelector('div[style*="font-weight:bold"]');
-                const headerText = headerSpan ? headerSpan.innerText : '';
-                const [teamA, teamB] = headerText.split(' vs ');
+                statusEl.innerHTML = `<span style="color:#fbbf24">⏳ Fetching Detailed Stats for ${replays.length} Games...</span>`;
 
-                let winsA = 0;
-                let winsB = 0;
-
-                const rosterA = (window.rosterData[teamA] || []).map(p => p.name.toLowerCase());
-
-                replays.forEach(replay => {
-                    let blueIsA = false;
-                    replay.blue.players.forEach(p => {
-                        if (rosterA.includes(p.name.toLowerCase())) blueIsA = true;
-                    });
-
-                    const blueGoals = replay.blue.players.reduce((sum, p) => sum + (p.stats?.core?.goals || 0), 0);
-                    const orangeGoals = replay.orange.players.reduce((sum, p) => sum + (p.stats?.core?.goals || 0), 0);
-
-                    if (blueIsA) {
-                        if (blueGoals > orangeGoals) winsA++;
-                        else winsB++;
-                    } else {
-                        if (orangeGoals > blueGoals) winsA++;
-                        else winsB++;
-                    }
-                });
-
-                // Update score inputs and regenerate tabs
-                document.getElementById(`rep-scoreA-${reportId}`).value = winsA;
-                document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
-                window.updateGameTabs(reportId, teamA, teamB, 'Rocket League');
-
-                // Wait for DOM to update tabs, then process stats
-                setTimeout(() => {
-                    replays.forEach((replay, idx) => {
-                        const gameIdx = idx + 1;
-                        processRocketLeagueStats(reportId, gameIdx, replay);
+                for (let idx = 0; idx < replays.length; idx++) {
+                    const gameIdx = idx + 1;
+                    const replayId = replays[idx].id;
+                    
+                    // Only populate tabs that exist based on the user's score input
+                    const container = document.getElementById(`game-content-${reportId}-${gameIdx}`);
+                    if (!container) continue;
+                    
+                    try {
+                        const statsUrl = `https://ballchasing.com/api/replays/${replayId}`;
+                        const statsRes = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(statsUrl)}`);
+                        if (!statsRes.ok) throw new Error(`Failed detailed sync for game ${gameIdx}`);
+                        const replayStats = await statsRes.json();
                         
+                        processRocketLeagueStats(reportId, gameIdx, replayStats);
+
                         // Set hidden replay-id for persistence
                         let hiddenInput = document.getElementById(`rl-replay-id-${reportId}-${gameIdx}`);
                         if (!hiddenInput) {
                             hiddenInput = document.createElement('input');
                             hiddenInput.type = 'hidden';
                             hiddenInput.id = `rl-replay-id-${reportId}-${gameIdx}`;
-                            const container = document.getElementById(`game-content-${reportId}-${gameIdx}`);
-                            if (container) container.appendChild(hiddenInput);
+                            container.appendChild(hiddenInput);
                         }
-                        if (hiddenInput) hiddenInput.value = replay.id;
-                    });
-                }, 50);
+                        hiddenInput.value = replayId;
+                    } catch (err) {
+                        console.error('Individual replay fetch error', err);
+                    }
+                }
 
-                statusEl.innerHTML = `<span style="color:#4ade80">✔ Success! ${replays.length} Games Loaded & Scored.</span>`;
+                statusEl.innerHTML = `<span style="color:#4ade80">✔ Success! ${replays.length} Games Populated.</span>`;
 
             } catch (e) {
                 console.error(e);
