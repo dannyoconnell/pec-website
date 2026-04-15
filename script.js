@@ -1739,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const total = row.wins + row.losses + row.ties;
                 const pct = total > 0 ? ((row.wins / total) * 100).toFixed(1) + '%' : '-';
                 const streak = row.streak || '-';
-                const streakColor = streak.startsWith('W') ? '#4ade80' : streak.startsWith('L') ? 'var(--accent-red)' : 'var(--text-muted)';
+                const streakColor = streak.startsWith('W') ? '#4ade80' : streak.startsWith('L') ? '#ef4444' : 'var(--text-muted)';
 
                 return `
                 <tr>
