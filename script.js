@@ -1173,7 +1173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize
         teams.forEach(t => {
             if (t !== 'BYE') {
-                standings[t] = { team: t, wins: 0, losses: 0, ties: 0 };
+                standings[t] = { team: t, wins: 0, losses: 0, ties: 0, results: [] };
             }
         });
 
@@ -1207,18 +1207,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (isNaN(sA) || isNaN(sB)) return;
 
                     if (sA > sB) {
-                        if (standings[m.teamA]) standings[m.teamA].wins++;
-                        if (standings[m.teamB]) standings[m.teamB].losses++;
+                        if (standings[m.teamA]) { standings[m.teamA].wins++; standings[m.teamA].results.push('W'); }
+                        if (standings[m.teamB]) { standings[m.teamB].losses++; standings[m.teamB].results.push('L'); }
                     } else if (sB > sA) {
-                        if (standings[m.teamB]) standings[m.teamB].wins++;
-                        if (standings[m.teamA]) standings[m.teamA].losses++;
+                        if (standings[m.teamB]) { standings[m.teamB].wins++; standings[m.teamB].results.push('W'); }
+                        if (standings[m.teamA]) { standings[m.teamA].losses++; standings[m.teamA].results.push('L'); }
                     } else {
                         // Tie (rare in some games but possible)
-                        if (standings[m.teamA]) standings[m.teamA].ties++;
-                        if (standings[m.teamB]) standings[m.teamB].ties++;
+                        if (standings[m.teamA]) { standings[m.teamA].ties++; standings[m.teamA].results.push('T'); }
+                        if (standings[m.teamB]) { standings[m.teamB].ties++; standings[m.teamB].results.push('T'); }
                     }
                 }
             });
+        });
+
+        // Calculate streak from ordered results
+        Object.values(standings).forEach(s => {
+            const r = s.results;
+            if (r.length === 0) {
+                s.streak = '-';
+            } else {
+                const last = r[r.length - 1];
+                let count = 0;
+                for (let i = r.length - 1; i >= 0; i--) {
+                    if (r[i] === last) count++;
+                    else break;
+                }
+                s.streak = `${last}${count}`;
+            }
         });
 
         // Convert to Array and Sort
@@ -1722,8 +1738,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             standingsBody.innerHTML = data.map((row, index) => {
                 const total = row.wins + row.losses + row.ties;
                 const pct = total > 0 ? ((row.wins / total) * 100).toFixed(1) + '%' : '-';
-                // Streak is not currently calculated in calculateStandings. Defaulting to '-'
-                const streak = '-';
+                const streak = row.streak || '-';
+                const streakColor = streak.startsWith('W') ? '#4ade80' : streak.startsWith('L') ? 'var(--accent-red)' : 'var(--text-muted)';
 
                 return `
                 <tr>
@@ -1739,7 +1755,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td>${row.wins}</td>
                     <td>${row.losses}</td>
                     <td>${pct}</td>
-                    <td style="color: var(--text-muted)">${streak}</td>
+                    <td style="color: ${streakColor}; font-weight: 700; font-family: var(--font-head);">${streak}</td>
                 </tr>
             `;
             }).join('');
