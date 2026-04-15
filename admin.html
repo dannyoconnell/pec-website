@@ -845,6 +845,20 @@
                                 </div>
                             </div>
 
+                            <!-- Rocket League Group Upload -->
+                            ${m.game === 'Rocket League' ? `
+                                <div style="margin-bottom:1.5rem; padding:1.5rem; background:rgba(0,0,0,0.2); border-radius:8px; border:1px solid #334155;">
+                                     <label style="font-size:0.8rem; color:#4ade80; display:block; margin-bottom:0.5rem; text-align:center;">
+                                        Ballchasing Group Link (Auto-populates all games)
+                                     </label>
+                                     <div style="display:flex; gap:0.5rem; justify-content:center;">
+                                         <input type="text" id="rl-group-url-${reportId}" class="form-control" style="max-width:400px;" placeholder="https://ballchasing.com/group/..." value="${report.ballchasingGroupUrl || ''}">
+                                         <button class="btn btn-outline" type="button" style="border-color:#4ade80; color:#4ade80;" onclick="handleGroupUrl('${reportId}')">Fetch Stats</button>
+                                     </div>
+                                     <div id="group-status-${reportId}" style="text-align:center; font-size:0.8rem; margin-top:0.5rem; color:#94a3b8;"></div>
+                                </div>
+                            ` : ''}
+
                             <!-- Dynamic Game Tabs -->
                             <div class="report-tabs" style="display:flex; gap:0.5rem; margin-bottom:1rem; overflow-x:auto;">
                                 <!-- Injected via JS -->
@@ -965,23 +979,8 @@
                     <div id="game-content-${reportId}-${i}" style="display:${display}">
                         ${gameMetaHTML}
                         ${game === 'Rocket League' ? `
-                                <div style="margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px dashed #334155;">
-                                     <label style="font-size:0.8rem; color:#4ade80; display:block; margin-bottom:0.5rem; text-align:center;">
-                                        Upload Replay File (Auto-Analyze)
-                                     </label>
-                                     <div style="display:flex; justify-content:center;">
-                                         <input type="file" accept=".replay" class="form-control" 
-                                            style="width:auto; cursor:pointer;"
-                                            onchange="handleReplayUpload(this, '${reportId}', ${i})"
-                                            ${savedGames[i]?.replayId ? 'disabled' : ''}>
-                                     </div>
-                                     <!-- Hidden input to store Replay ID for persistence -->
-                                     <input type="hidden" id="rl-replay-id-${reportId}-${i}" value="${savedGames[i]?.replayId || ''}">
-                                     
-                                     <div id="replay-status-${reportId}-${i}" style="text-align:center; font-size:0.8rem; margin-top:0.5rem; color:#94a3b8;">
-                                        ${savedGames[i]?.replayId ? `<span style="color:#4ade80">✔ Replay Analyzed (${savedGames[i].replayId})</span>` : ''}
-                                     </div>
-                                </div>
+                             <!-- Hidden input to store Replay ID for persistence -->
+                             <input type="hidden" id="rl-replay-id-${reportId}-${i}" value="${savedGames[i]?.replayId || ''}">
                         ` : ''}
                         ${game === 'Valorant' ? `
                             <!-- Val Paste Zone -->
@@ -1012,79 +1011,96 @@
         };
 
         // --- ROCKET LEAGUE UPLOAD LOGIC ---
-        async function handleReplayUpload(input, reportId, gameIdx) {
-            const file = input.files[0];
-            if (!file) return;
+        window.handleGroupUrl = async function (reportId) {
+            const input = document.getElementById(`rl-group-url-${reportId}`);
+            let url = input.value.trim();
+            if (!url) return;
 
-            const statusId = `replay-status-${reportId}-${gameIdx}`;
-            const statusEl = document.getElementById(statusId);
-            statusEl.innerHTML = '<span style="color:#fbbf24">⏳ Uploading & Analyzing...</span>';
-            input.disabled = true;
+            const statusEl = document.getElementById(`group-status-${reportId}`);
+            statusEl.innerHTML = '<span style="color:#fbbf24">⏳ Fetching Group Replays...</span>';
+
+            // Extract Group ID
+            let groupId = url;
+            if (url.includes('ballchasing.com/group/')) {
+                groupId = url.split('ballchasing.com/group/')[1].split('/')[0].split('?')[0];
+            } else if (url.includes('?group=')) {
+                groupId = url.split('?group=')[1].split('&')[0];
+            }
 
             try {
-                // 1. Upload to Ballchasing via Proxy
-                const formData = new FormData();
-                formData.append('file', file);
-
-                const uploadRes = await fetch('/.netlify/functions/upload-replay', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!uploadRes.ok) {
-                    const err = await uploadRes.json();
-                    throw new Error(err.error || 'Upload failed');
-                }
-
-                const uploadData = await uploadRes.json();
-                const replayId = uploadData.id;
-
-                if (!replayId) throw new Error('No Replay ID returned');
-
-                statusEl.innerHTML = `<span style="color:#fbbf24">⏳ Fetching Stats (${replayId})...</span>`;
-
-                // 2. Fetch Stats for this Replay
-                // We poll for a few seconds because analysis might take a moment?
-                // Actually endpoints usually return metadata immediately or shortly. 
-                // Let's try fetching specifics.
-
-                // Construct target URL for our proxy
-                const statsUrl = `https://ballchasing.com/api/replays/${replayId}`;
+                // Fetch group replays
+                const statsUrl = `https://ballchasing.com/api/replays?group=${groupId}`;
                 const statsRes = await fetch(`/.netlify/functions/fetch-ballchasing?url=${encodeURIComponent(statsUrl)}`);
 
-                if (!statsRes.ok) throw new Error('Failed to fetch stats');
-                const replayStats = await statsRes.json();
+                if (!statsRes.ok) throw new Error('Failed to fetch group');
+                const data = await statsRes.json();
 
-                // 3. Parse & Populate
-                processRocketLeagueStats(reportId, gameIdx, replayStats);
-
-                statusEl.innerHTML = `<span style="color:#4ade80">✔ Success! Stats Loaded.</span>`;
-
-                // Store Replay ID in DOM state (will be saved on Save Report)
-                // We need to attach it to the games object
-                // accessing 'games' variable here is tricky scope-wise. 
-                // But we can just rely on the inputs being populated and the Save Logic reading them.
-                // WE SHOULD persist the replayID though for future reference.
-                // Let's add a hidden input or store in a global temp tracker?
-                // Better: The 'games' object in memory (from loadReports) isn't globally accessible easily here without passing it.
-                // We can add a hidden input for replayId
-
-                let hiddenInput = document.getElementById(`rl-replay-id-${reportId}-${gameIdx}`);
-                if (!hiddenInput) {
-                    hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.id = `rl-replay-id-${reportId}-${gameIdx}`;
-                    statusEl.appendChild(hiddenInput); // Just append somewhere valid
+                if (!data.list || data.list.length === 0) {
+                    throw new Error('No replays found in this group.');
                 }
-                hiddenInput.value = replayId;
+
+                // Sort by date ascending so Game 1 is first
+                const replays = data.list.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                // Auto-Score Logic based on goals
+                const headerSpan = document.querySelector(`#report-details-${reportId}`).parentElement.querySelector('div[style*="font-weight:bold"]');
+                const headerText = headerSpan ? headerSpan.innerText : '';
+                const [teamA, teamB] = headerText.split(' vs ');
+
+                let winsA = 0;
+                let winsB = 0;
+
+                const rosterA = (window.rosterData[teamA] || []).map(p => p.name.toLowerCase());
+
+                replays.forEach(replay => {
+                    let blueIsA = false;
+                    replay.blue.players.forEach(p => {
+                        if (rosterA.includes(p.name.toLowerCase())) blueIsA = true;
+                    });
+
+                    const blueGoals = replay.blue.players.reduce((sum, p) => sum + (p.stats?.core?.goals || 0), 0);
+                    const orangeGoals = replay.orange.players.reduce((sum, p) => sum + (p.stats?.core?.goals || 0), 0);
+
+                    if (blueIsA) {
+                        if (blueGoals > orangeGoals) winsA++;
+                        else winsB++;
+                    } else {
+                        if (orangeGoals > blueGoals) winsA++;
+                        else winsB++;
+                    }
+                });
+
+                // Update score inputs and regenerate tabs
+                document.getElementById(`rep-scoreA-${reportId}`).value = winsA;
+                document.getElementById(`rep-scoreB-${reportId}`).value = winsB;
+                window.updateGameTabs(reportId, teamA, teamB, 'Rocket League');
+
+                // Wait for DOM to update tabs, then process stats
+                setTimeout(() => {
+                    replays.forEach((replay, idx) => {
+                        const gameIdx = idx + 1;
+                        processRocketLeagueStats(reportId, gameIdx, replay);
+                        
+                        // Set hidden replay-id for persistence
+                        let hiddenInput = document.getElementById(`rl-replay-id-${reportId}-${gameIdx}`);
+                        if (!hiddenInput) {
+                            hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.id = `rl-replay-id-${reportId}-${gameIdx}`;
+                            const container = document.getElementById(`game-content-${reportId}-${gameIdx}`);
+                            if (container) container.appendChild(hiddenInput);
+                        }
+                        if (hiddenInput) hiddenInput.value = replay.id;
+                    });
+                }, 50);
+
+                statusEl.innerHTML = `<span style="color:#4ade80">✔ Success! ${replays.length} Games Loaded & Scored.</span>`;
 
             } catch (e) {
                 console.error(e);
                 statusEl.innerHTML = `<span style="color:#ef4444">❌ Error: ${e.message}</span>`;
-                input.disabled = false;
-                input.value = ''; // Reset
             }
-        }
+        };
 
         function processRocketLeagueStats(reportId, gameIdx, replay) {
             const container = document.getElementById(`game-content-${reportId}-${gameIdx}`);
@@ -1511,8 +1527,9 @@
             const scoreA = scoreAInput.value;
             const scoreB = document.getElementById(`rep-scoreB-${reportId}`).value;
 
-            // Get Ballchasing Group URL (Deprecated)
-            const ballchasingGroupUrl = '';
+            // Get Ballchasing Group URL
+            const groupInput = document.getElementById(`rl-group-url-${reportId}`);
+            const ballchasingGroupUrl = groupInput ? groupInput.value : '';
 
             const card = document.getElementById(`report-details-${reportId}`);
             // Find all game inputs
