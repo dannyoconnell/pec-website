@@ -170,8 +170,8 @@
         <div class="admin-grid">
             <aside class="admin-sidebar">
                 <div class="admin-nav-item" onclick="switchTab('settings')">Global Settings</div>
-                <div class="admin-nav-item active" onclick="switchTab('scores')">Live Ticker & Scores</div>
-                <div class="admin-nav-item" onclick="switchTab('schedule')">Schedule Editor</div>
+                <div class="admin-nav-item active" onclick="switchTab('schedule')">Schedule Editor</div>
+
                 <div class="admin-nav-item" onclick="switchTab('roster')">Roster Editor</div>
                 <div class="admin-nav-item" onclick="switchTab('reports')">Match Reports</div>
                 <div class="admin-nav-item" onclick="switchTab('news')">News Editor</div>
@@ -205,17 +205,10 @@
                     </div>
                 </div>
 
-                <!-- Scores Editor -->
-                <div id="view-scores">
-                    <h2>Manage Ticker Scores</h2>
-                    <div id="scores-list"></div>
-                    <button class="btn btn-outline" onclick="addScoreRow()">+ Add New Score Match</button>
-                    <button class="btn btn-primary" style="margin-top:2rem;" onclick="saveScores()">Save
-                        Changes</button>
-                </div>
+
 
                 <!-- Schedule Editor -->
-                <div id="view-schedule" style="display:none;">
+                <div id="view-schedule">
                     <h2>Manage Schedule</h2>
                     <p style="color:var(--text-muted);">Select a week to edit matches.</p>
                     <select id="admin-week-select" class="form-control" style="max-width:200px; margin-bottom:1rem;"
@@ -449,7 +442,6 @@
         // --- SCORES LOGIC ---
         function initAdmin() {
             loadGlobalSettings();
-            renderScoresEditor();
             loadScheduleEditor();
             initRosterDropdown();
             loadReports();

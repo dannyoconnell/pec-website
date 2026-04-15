@@ -7,7 +7,6 @@ const teamLogos = {
     'Boise State': 'https://a.espncdn.com/i/teamlogos/ncaa/500/68.png',
     'Kansas': 'https://a.espncdn.com/i/teamlogos/ncaa/500/2305.png', // Using 2305 (standard) or 126. 2305 is safe.
     'Michigan State': 'https://a.espncdn.com/i/teamlogos/ncaa/500/127.png',
-    'Mich State': 'https://a.espncdn.com/i/teamlogos/ncaa/500/127.png',
     'Minnesota': 'https://a.espncdn.com/i/teamlogos/ncaa/500/135.png',
     'Nebraska': 'https://a.espncdn.com/i/teamlogos/ncaa/500/158.png',
     'Ohio State': 'https://a.espncdn.com/i/teamlogos/ncaa/500/194.png',
@@ -21,7 +20,6 @@ const teamColors = {
     'Boise State': '#0033A0', // Blue (secondary #D64309 orange)
     'Kansas': '#0051BA', // Blue (secondary #E8000D red)
     'Michigan State': '#18453B', // Green
-    'Mich State': '#18453B',
     'Minnesota': '#7A0019', // Maroon
     'Nebraska': '#E41C38', // Scarlet
     'Ohio State': '#BB0000', // Scarlet
@@ -2042,7 +2040,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Render Channel Grid
         const channelGrid = document.getElementById('school-channels-grid');
-        const sortedTeams = Object.keys(teamLogos).filter(t => t !== 'Mich State' && t !== 'BYE').sort();
+        const sortedTeams = Object.keys(teamLogos).filter(t => t !== 'BYE').sort();
 
         channelGrid.innerHTML = sortedTeams.map(team => {
             const channel = twitchChannels[team] || 'twitch'; // Default fallback
