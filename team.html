@@ -44,8 +44,9 @@
 
     <main>
         <div class="team-header-container">
-            <section class="team-hero">
-                <div class="container team-hero-inner">
+            <section class="team-hero" style="position: relative; overflow: hidden;">
+                <div id="team-hero-bg" style="position: absolute; top: 0; right: 0; width: 60%; height: 100%; background-size: cover; background-position: center right; z-index: 1; -webkit-mask-image: linear-gradient(to right, transparent 0%, black 80%); mask-image: linear-gradient(to right, transparent 0%, black 100%); opacity: 0.5;"></div>
+                <div class="container team-hero-inner" style="position: relative; z-index: 2;">
                     <div class="team-hero-logo" id="team-hero-logo"
                         style="background:transparent; width:200px; height:200px;">?</div>
                     <div class="team-hero-info">
@@ -54,7 +55,6 @@
                     </div>
                 </div>
             </section>
-
         </div>
 
         <section class="container team-unified-grid" style="padding: 2rem 1rem;">

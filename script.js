@@ -54,6 +54,7 @@ try {
     console.warn('Failed to parse pec_school_info', e);
 }
 
+window.teamCampuses = {};
 // Apply overrides
 Object.keys(schoolInfo).forEach(team => {
     const info = schoolInfo[team];
@@ -62,6 +63,7 @@ Object.keys(schoolInfo).forEach(team => {
     if (info.games && Array.isArray(info.games)) {
         window.teamGames[team] = info.games;
     }
+    if (info.campusImage) window.teamCampuses[team] = info.campusImage;
 });
 
 const getLogoImg = (name, size = '70%') => {
@@ -1870,8 +1872,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Update Hero
             teamHeroName.textContent = teamId;
-
             document.getElementById('team-hero-logo').innerHTML = getLogoImg(teamId, '80%');
+
+            // Set Campus Header Background
+            const heroBg = document.getElementById('team-hero-bg');
+            if (heroBg) {
+                const campusUrl = window.teamCampuses[teamId];
+                if (campusUrl) {
+                    heroBg.style.backgroundImage = `url('${campusUrl}')`;
+                } else {
+                    heroBg.style.backgroundImage = `none`;
+                }
+            }
 
             // Populate Schedule (Upcoming Matches - Series View)
             // Populate Schedule (Upcoming Matches - Table View)
@@ -2010,7 +2022,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     rosterContainer.innerHTML = filteredRoster.map(p => `
                         <div class="compact-player-card" style="display: flex; justify-content: flex-start; align-items: center; gap: 1.5rem; background: #0f172a; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #334155; transition: transform 0.2s; cursor: pointer; text-align: left;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" onclick="window.location.href='player.html?player=${encodeURIComponent(p.name)}&team=${encodeURIComponent(teamId)}'">
-                            <div class="player-avatar" style="width: 50px; height: 50px; flex-shrink: 0; margin: 0; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-blue);">
+                            <div class="player-avatar" style="width: 50px; height: 50px; flex-shrink: 0; margin: 0; border-radius: 50%; overflow: hidden; border: 2px solid ${window.teamColors[teamId] || 'var(--accent-blue)'};">
                                 <img src="${p.photo ? p.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random&color=fff&size=100`}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover;">
                             </div>
                             <div class="player-info" style="display: flex; flex-direction: column; justify-content: center; text-align: left;">
@@ -2553,11 +2565,11 @@ window.renderTeamStatsV2 = () => {
                 const renderCard = (title, p, valStr, label) => `
                         <div class="performer-card" style="background:#0f172a; border-radius:8px; padding:1rem; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden;">
                             <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.05em;">${title}</div>
-                            <div class="performer-img" style="width:60px; height:60px; border-radius:50%; overflow:hidden; margin-bottom:0.5rem; border:2px solid #ef4444;"> <!-- Red border for Val -->
+                            <div class="performer-img" style="width:60px; height:60px; border-radius:50%; overflow:hidden; margin-bottom:0.5rem; border:2px solid ${window.teamColors[teamId] || '#ef4444'};"> <!-- Red border for Val -->
                                 <img src="${p.img}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='assets/logo.png'">
                             </div>
                             <div style="font-weight:bold; color:white; font-size:1rem;">${p.name}</div>
-                            <div style="font-size:1.2rem; color:#ef4444; font-weight:900; margin-top:0.25rem;">${valStr}</div>
+                            <div style="font-size:1.2rem; color:${window.teamColors[teamId] || '#ef4444'}; font-weight:900; margin-top:0.25rem;">${valStr}</div>
                             <div style="font-size:0.7rem; color:#64748b;">${label}</div>
                         </div>
                     `;
@@ -2746,11 +2758,11 @@ window.renderTeamStatsV2 = () => {
                     return `
                             <div class="performer-card" style="background:#0f172a; border-radius:8px; padding:1rem; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden;">
                                 <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.05em;">${title}</div>
-                                <div class="performer-img" style="width:60px; height:60px; border-radius:50%; overflow:hidden; margin-bottom:0.5rem; border:2px solid #3b82f6;">
+                                <div class="performer-img" style="width:60px; height:60px; border-radius:50%; overflow:hidden; margin-bottom:0.5rem; border:2px solid ${window.teamColors[teamId] || '#3b82f6'};">
                                     <img src="${p.img}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='assets/logo.png'">
                                 </div>
                                 <div style="font-weight:bold; color:white; font-size:1rem;">${p.name}</div>
-                                <div style="font-size:1.2rem; color:#3b82f6; font-weight:900; margin-top:0.25rem;">${fmt(avgVal)}</div>
+                                <div style="font-size:1.2rem; color:${window.teamColors[teamId] || '#3b82f6'}; font-weight:900; margin-top:0.25rem;">${fmt(avgVal)}</div>
                                 <div style="font-size:0.7rem; color:#64748b;">${label}/Map</div>
                             </div>
                         `;
@@ -2847,11 +2859,11 @@ window.renderTeamStatsV2 = () => {
             const renderRLCard = (title, p, val, label) => `
                 <div class="performer-card" style="background:#0f172a; border-radius:8px; padding:1rem; display:flex; flex-direction:column; align-items:center; text-align:center; border:1px solid #334155;">
                     <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem; text-transform:uppercase;">${title}</div>
-                    <div class="performer-img" style="width:50px; height:50px; border-radius:50%; overflow:hidden; margin-bottom:0.5rem; border:2px solid var(--accent-blue);">
+                    <div class="performer-img" style="width:50px; height:50px; border-radius:50%; overflow:hidden; margin-bottom:0.5rem; border:2px solid ${window.teamColors[teamId] || 'var(--accent-blue)'};">
                          <img src="${p.img || 'assets/logo.png'}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='assets/logo.png'">
                     </div>
                     <div style="font-weight:bold; color:white;">${p.name}</div>
-                    <div style="font-size:1.2rem; color:var(--accent-blue); font-weight:900;">${val}</div>
+                    <div style="font-size:1.2rem; color:${window.teamColors[teamId] || 'var(--accent-blue)'}; font-weight:900;">${val}</div>
                     <div style="font-size:0.7rem; color:#64748b;">${label}</div>
                 </div>
             `;
@@ -2982,12 +2994,12 @@ window.renderTeamStatsV2 = () => {
                 return `
                 <div class="performer-card" style="background:#0f172a; border-radius:8px; padding:1rem; display:flex; flex-direction:column; align-items:center; text-align:center; border:1px solid #334155;">
                     <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.5rem; text-transform:uppercase;">${title}</div>
-                    <div class="performer-img" style="width:50px; height:50px; border-radius:50%; overflow:visible; margin-bottom:0.5rem; position:relative; border:2px solid var(--accent-blue);">
+                    <div class="performer-img" style="width:50px; height:50px; border-radius:50%; overflow:visible; margin-bottom:0.5rem; position:relative; border:2px solid ${window.teamColors[teamId] || 'var(--accent-blue)'};">
                          <img src="${p.img || 'assets/logo.png'}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.src='assets/logo.png'">
                          ${mainChar ? `<img src="${getSmashIconUrl(mainChar)}" style="width:20px; height:20px; position:absolute; bottom:-4px; right:-4px; background:#0f172a; border-radius:50%; padding:2px;">` : ''}
                     </div>
                     <div style="font-weight:bold; color:white;">${p.name}</div>
-                    <div style="font-size:1.2rem; color:var(--accent-blue); font-weight:900;">${val}</div>
+                    <div style="font-size:1.2rem; color:${window.teamColors[teamId] || 'var(--accent-blue)'}; font-weight:900;">${val}</div>
                     <div style="font-size:0.7rem; color:#64748b;">${label}</div>
                 </div>`;
             };
@@ -3065,6 +3077,11 @@ window.renderPlayerPage = () => {
     document.getElementById('player-team').textContent = finalTeamName;
     document.getElementById('player-role-label').textContent = p.role || 'Player'; // Top Label
     document.getElementById('player-game-display').textContent = p.game; // Bottom Meta
+
+    const schoolColor = window.teamColors[finalTeamName] || 'var(--accent-blue)';
+    const avatarLarge = document.querySelector('.player-avatar-large');
+    if (avatarLarge) avatarLarge.style.borderColor = schoolColor;
+    document.getElementById('player-role-label').style.color = schoolColor;
 
     // Images
     const photoUrl = p.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=1e293b&color=fff&size=256`;

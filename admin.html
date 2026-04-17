@@ -217,14 +217,17 @@
                             </select>
                         </div>
                         
-                        <div class="form-group" style="margin-top: 1.5rem;">
-                            <label>Logo URL</label>
+                        <div class="form-group" style="margin-bottom:1rem;">
+                            <label style="display:block; margin-bottom:0.5rem;">Team Logo URL</label>
                             <input type="text" id="admin-school-logo" class="form-control" placeholder="https://...">
                         </div>
-
-                        <div class="form-group" style="margin-top: 1.5rem;">
-                            <label>Primary Color (Hex)</label>
-                            <div style="display:flex; align-items:center; gap: 1rem;">
+                        <div class="form-group" style="margin-bottom:1rem;">
+                            <label style="display:block; margin-bottom:0.5rem;">Campus Background Image URL (Optional)</label>
+                            <input type="text" id="admin-school-campus" class="form-control" placeholder="https://...">
+                        </div>
+                        <div class="form-group" style="margin-bottom:1rem;">
+                            <label style="display:block; margin-bottom:0.5rem;">Primary Color</label>
+                            <div style="display:flex; align-items:center; gap:1rem;">
                                 <input type="color" id="admin-school-color" class="form-control" style="width:50px; height:40px; padding:0; cursor:pointer;" value="#333333">
                                 <input type="text" id="admin-school-color-text" class="form-control" style="max-width:150px;" placeholder="#000000" oninput="document.getElementById('admin-school-color').value = this.value" onchange="document.getElementById('admin-school-color').value = this.value">
                             </div>
@@ -508,19 +511,24 @@
             const team = document.getElementById('admin-school-team-select').value;
             if (!team) {
                 document.getElementById('admin-school-logo').value = '';
+                document.getElementById('admin-school-campus').value = '';
                 document.getElementById('admin-school-color').value = '#333333';
                 document.getElementById('admin-school-color-text').value = '';
+                document.getElementById('admin-school-game-rl').checked = false;
+                document.getElementById('admin-school-game-ow').checked = false;
+                document.getElementById('admin-school-game-sb').checked = false;
+                document.getElementById('admin-school-game-val').checked = false;
                 return;
             }
 
             const info = adminSchoolData[team] || {};
-            const logo = info.logo || window.teamLogos[team] || 'placeholder.png';
-            let color = info.primaryColor || window.teamColors[team] || '#333333';
-            const games = info.games || window.teamGames[team] || [];
+            const logo = info.logo || '';
+            const campus = info.campusImage || '';
+            const color = info.primaryColor || '#333333';
+            const games = info.games || ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'];
 
             document.getElementById('admin-school-logo').value = logo;
-            
-            if(color.length === 4) color = '#' + color[1]+color[1]+color[2]+color[2]+color[3]+color[3];
+            document.getElementById('admin-school-campus').value = campus;
             document.getElementById('admin-school-color').value = color;
             document.getElementById('admin-school-color-text').value = color;
 
@@ -533,11 +541,12 @@
         function saveSchoolInfo() {
             const team = document.getElementById('admin-school-team-select').value;
             if (!team) {
-                alert('Please select a team first.');
+                alert("Please expand and select a team first.");
                 return;
             }
 
             const logo = document.getElementById('admin-school-logo').value.trim();
+            const campus = document.getElementById('admin-school-campus').value.trim();
             const color = document.getElementById('admin-school-color').value.trim();
             
             const games = [];
@@ -547,7 +556,7 @@
             if (document.getElementById('admin-school-game-val').checked) games.push('Valorant');
 
             if (!adminSchoolData[team]) adminSchoolData[team] = {};
-            adminSchoolData[team] = { logo, primaryColor: color, games };
+            adminSchoolData[team] = { logo, campusImage: campus, primaryColor: color, games };
 
             localStorage.setItem('pec_school_info', JSON.stringify(adminSchoolData));
             
