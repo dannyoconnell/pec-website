@@ -578,14 +578,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const allPlayers = [...playersA, ...playersB];
 
                             const playerObj = allPlayers.find(p => p.name.toLowerCase() === playerName.toLowerCase());
-                            if (!playerObj) {
-                                container.innerHTML = '';
-                                return;
-                            }
-
-                            const teamName = playersA.some(p => p.name === playerObj.name) ? teamA : teamB;
+                            
+                            // Resilience: Even if player not in roster, show the MVP card
+                            const displayName = playerObj ? playerObj.name : (playerName.charAt(0).toUpperCase() + playerName.slice(1));
+                            const playerPhoto = (playerObj && playerObj.photo) ? playerObj.photo : 'assets/roster/placeholder.png';
+                            
+                            const teamName = playerObj 
+                                ? (playersA.some(p => p.name === playerObj.name) ? teamA : teamB)
+                                : (playerName.includes(' (a)') ? teamA : (playerName.includes(' (b)') ? teamB : teamA));
+                            
                             const accentColor = teamColors[teamName] || '#fff';
-                            const label = mode === 'series' ? 'Series MVP' : `Game ${mode} MVP`;
+                             let gameNum = mode;
+                             if (mode !== 'series' && !isNaN(mode)) {
+                                 gameNum = Array.isArray(report.matchHistory) ? (parseInt(mode) + 1) : mode;
+                             }
+                             const label = mode === 'series' ? 'Series MVP' : `Game ${gameNum} MVP`;
 
                             let statsHTML = '';
                             if (game === 'Rocket League') {
@@ -661,11 +668,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             container.innerHTML = `
                                 <div class="mvp-card" style="border-top: 4px solid ${accentColor}">
                                     <div class="mvp-badge" style="background:${accentColor}">${label}</div>
-                                    <img src="${playerObj.photo || 'assets/logo.png'}" alt="${playerObj.name}" class="mvp-player-img" onerror="this.src='assets/logo.png'">
+                                    <img src="${playerPhoto}" alt="${displayName}" class="mvp-player-img" onerror="this.src='assets/roster/placeholder.png'">
                                     <div class="mvp-info">
                                         <span class="team-name" style="color:${accentColor}">${teamName}</span>
-                                        <h3>${playerObj.name}</h3>
-                                        <div style="color:var(--text-muted); font-size: 0.85rem; text-transform:uppercase; font-weight:700; letter-spacing:1px; margin-top:0.25rem;">${playerObj.role || ''}</div>
+                                        <h3>${displayName}</h3>
+                                        <div style="color:var(--text-muted); font-size: 0.85rem; text-transform:uppercase; font-weight:700; letter-spacing:1px; margin-top:0.25rem;">${playerObj ? playerObj.role : ''}</div>
                                         <div class="mvp-stats-grid">
                                             ${statsHTML}
                                         </div>
@@ -741,6 +748,47 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
 
                             if (cardTitle) cardTitle.innerHTML = `Matchup Details <span style="font-weight:400; opacity:0.6; font-size:0.7em; margin-left:0.5rem;">GAME ${mode}</span>`;
+
+                            // --- Calculate and Render MVP for this Smash Game ---
+                            matchups.forEach(m => {
+                                const pA = (m.pA || '').toLowerCase();
+                                const pB = (m.pB || '').toLowerCase();
+                                const sA = parseInt(m.scoreA || 0);
+                                const sB = parseInt(m.scoreB || 0);
+
+                                if (pA) {
+                                    if (!displayStats[pA]) displayStats[pA] = { k: 0, d: 0 };
+                                    displayStats[pA].k += Math.min(3, sA);
+                                    displayStats[pA].d += Math.min(3, sB);
+                                }
+                                if (pB) {
+                                    if (!displayStats[pB]) displayStats[pB] = { k: 0, d: 0 };
+                                    displayStats[pB].k += Math.min(3, sB);
+                                    displayStats[pB].d += Math.min(3, sA);
+                                }
+                            });
+
+                            let mvpName = null;
+                            let maxScore = -Infinity;
+                            Object.keys(displayStats).forEach(name => {
+                                if (!name || name.trim() === '') return; // Skip empty names
+                                const s = displayStats[name];
+                                const k = parseFloat(s.k || 0);
+                                const d = parseFloat(s.d || 0);
+                                const currentScore = (k - d) + (k * 0.01);
+                                if (currentScore > maxScore) {
+                                    maxScore = currentScore;
+                                    mvpName = name;
+                                }
+                            });
+
+                            if (mvpName) {
+                                renderMVP(mvpName, displayStats[mvpName], mode);
+                            } else {
+                                const container = document.getElementById('mvp-container');
+                                if (container) container.innerHTML = '';
+                            }
+
                             return;
                         }
 
@@ -764,9 +812,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (mode === 'series') {
                             if (cardTitle) cardTitle.innerHTML = 'Player Statistics <span style="font-weight:400; opacity:0.6; font-size:0.7em; margin-left:0.5rem;">SERIES TOTAL</span>';
 
-                            if (game === 'Smash Bros' && report.games) {
+                            if (game === 'Smash Bros' && (report.games || report.matchHistory)) {
                                 // Dynamic Aggregation for Smash (Fixes retroactive stats for Stocks Taken/Lost)
-                                Object.values(report.games).forEach(g => {
+                                const source = report.games || report.matchHistory || {};
+                                Object.values(source).forEach(g => {
                                     if (g.smash_matchups) {
                                         g.smash_matchups.forEach(m => {
                                             const pA = (m.pA || '').toLowerCase();
@@ -1081,6 +1130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         let maxScore = -Infinity;
 
                         Object.keys(displayStats).forEach(name => {
+                            if (!name || name.trim() === '') return; // Skip empty names
                             const s = displayStats[name];
                             let currentScore = 0;
 
