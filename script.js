@@ -551,18 +551,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (report) {
                     // Update Scores (Swap if teams were swapped)
-                    const scoreAEl = document.getElementById('score-A');
-                    const scoreBEl = document.getElementById('score-B');
-                    if (scoreAEl && scoreBEl) {
-                        const finalScoreA = teamsSwapped ? report.scoreB : report.scoreA;
-                        const finalScoreB = teamsSwapped ? report.scoreA : report.scoreB;
-                        scoreAEl.textContent = finalScoreA !== undefined ? finalScoreA : '-';
-                        scoreBEl.textContent = finalScoreB !== undefined ? finalScoreB : '-';
+                    const bigScore = document.querySelector('.big-score');
+                    if (bigScore) {
+                        const sA = teamsSwapped ? report.scoreB : report.scoreA;
+                        const sB = teamsSwapped ? report.scoreA : report.scoreB;
                         
-                        const bigScore = document.querySelector('.big-score');
-                        if (bigScore) {
-                            bigScore.innerHTML = `<span id="score-A">${finalScoreA !== undefined ? finalScoreA : '-'}</span> - <span id="score-B">${finalScoreB !== undefined ? finalScoreB : '-'}</span>`;
-                        }
+                        // Determine color for winner
+                        const cA = parseInt(sA) > parseInt(sB) ? 'var(--accent-green)' : '#fff';
+                        const cB = parseInt(sB) > parseInt(sA) ? 'var(--accent-green)' : '#fff';
+
+                        bigScore.innerHTML = `<span id="score-A" style="color:${cA}">${sA !== undefined ? sA : '-'}</span> - <span id="score-B" style="color:${cB}">${sB !== undefined ? sB : '-'}</span>`;
                     }
 
                     const statsTable = document.getElementById('player-stats-table');
@@ -1015,19 +1013,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         renderTable('series');
                     }
 
-                    // Also update Main Score if valid in report
-                    if (report.scoreA !== undefined && report.scoreA !== null && report.scoreA !== '') {
-                        const bigScore = document.querySelector('.big-score');
-                        if (bigScore) {
-                            const sA = report.scoreA;
-                            const sB = report.scoreB || '0';
-                            // Determine color for winner
-                            const cA = parseInt(sA) > parseInt(sB) ? 'var(--accent-green)' : '#fff';
-                            const cB = parseInt(sB) > parseInt(sA) ? 'var(--accent-green)' : '#fff';
-
-                            bigScore.innerHTML = `<span id="score-A" style="color:${cA}">${sA}</span> - <span id="score-B" style="color:${cB}">${sB}</span>`;
-                        }
-                    }
+                    // The scoreboard and stats are now handled within the report lookup block above
+                    // to ensure teams are correctly swapped if necessary.
 
                 } else {
                     // No Report Found check
