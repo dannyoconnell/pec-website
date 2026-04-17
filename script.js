@@ -639,6 +639,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         <span class="mvp-stat-label" title="Damage + Heal + Mitigated">Impact</span>
                                     </div>
                                 `;
+                            } else if (game === 'Smash Bros') {
+                                const diff = (stats.k || 0) - (stats.d || 0);
+                                const diffColor = diff > 0 ? '#4ade80' : (diff < 0 ? '#ef4444' : 'var(--text-muted)');
+                                statsHTML = `
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.k || 0}</span>
+                                        <span class="mvp-stat-label">Taken</span>
+                                    </div>
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.d || 0}</span>
+                                        <span class="mvp-stat-label">Lost</span>
+                                    </div>
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value" style="color:${diffColor}">${diff > 0 ? '+' : ''}${diff}</span>
+                                        <span class="mvp-stat-label">Stock +/-</span>
+                                    </div>
+                                `;
                             }
 
                             container.innerHTML = `
@@ -667,49 +684,57 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const replay = report.matchHistory[mode];
                             const matchups = (replay && replay.smash_matchups) || [];
 
-                            // Header
+                            // Header (9 Columns for Smash)
                             const thead = statsTable.querySelector('thead');
                             thead.innerHTML = `
-                                <tr>
-                                    <th style="width:40%; text-align:right">${teamA}</th>
-                                    <th style="width:20%; text-align:center">Result</th>
-                                    <th style="width:40%; text-align:left">${teamB}</th>
+                                <tr class="smash-header">
+                                    <th style="width:5%">Order</th>
+                                    <th style="width:15%">Player</th>
+                                    <th style="width:18%">Character</th>
+                                    <th style="width:7%; text-align:center">Pts</th>
+                                    <th style="width:10%; text-align:center; background: rgba(255,255,255,0.05);">Match</th>
+                                    <th style="width:7%; text-align:center">Pts</th>
+                                    <th style="width:18%; text-align:right">Character</th>
+                                    <th style="width:15%; text-align:right">Player</th>
+                                    <th style="width:5%; text-align:right">Order</th>
                                 </tr>
                             `;
 
                             // Body
                             const tbody = statsTable.querySelector('tbody');
                             if (matchups.length === 0) {
-                                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:2rem; opacity:0.5;">No matchup data available for this game.</td></tr>`;
+                                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:2rem; opacity:0.5;">No detailed matchup data available for this game.</td></tr>`;
                             } else {
-                                tbody.innerHTML = matchups.map(m => {
+                                const labels = ["Match 1", "Match 2", "Match 3", "Match 4", "TIEBREAKER"];
+                                tbody.innerHTML = [0, 1, 2, 3, 4].map(idx => {
+                                    const m = matchups[idx] || {};
                                     if (!m.pA && !m.pB) return ''; // Skip empty rows
-                                    
+
                                     const p1 = teamsSwapped ? m.pB : m.pA;
                                     const char1 = teamsSwapped ? m.charB : m.charA;
                                     const score1 = teamsSwapped ? m.scoreB : m.scoreA;
-                                    
+
                                     const p2 = teamsSwapped ? m.pA : m.pB;
                                     const char2 = teamsSwapped ? m.charA : m.charB;
                                     const score2 = teamsSwapped ? m.scoreA : m.scoreB;
 
+                                    // Simplified mapping for "Order"
+                                    const orderLabel = (i) => {
+                                        if (i === 4) return 'TB';
+                                        return `#${i + 1}`;
+                                    };
+
                                     return `
-                                        <tr>
-                                            <td style="text-align:right; vertical-align:middle;">
-                                                <span style="font-weight:bold; font-size:1.1em; display:block;">${p1 || '<span style="opacity:0.3">-</span>'}</span>
-                                                <span style="font-size:0.85em; opacity:0.7; color:var(--text-muted);">${char1 || ''}</span>
-                                            </td>
-                                            <td style="text-align:center; vertical-align:middle;">
-                                                <div style="font-weight:900; font-size:1.4em; letter-spacing:2px;">
-                                                    <span style="color:var(--accent-green)">${score1 || '0'}</span>
-                                                    <span style="color:#475569; margin:0 4px;">-</span>
-                                                    <span style="color:var(--accent-red)">${score2 || '0'}</span>
-                                                </div>
-                                            </td>
-                                            <td style="text-align:left; vertical-align:middle;">
-                                                <span style="font-weight:bold; font-size:1.1em; display:block;">${p2 || '<span style="opacity:0.3">-</span>'}</span>
-                                                <span style="font-size:0.85em; opacity:0.7; color:var(--text-muted);">${char2 || ''}</span>
-                                            </td>
+                                        <tr class="smash-row">
+                                            <td style="opacity:0.6; font-size:0.8rem;">${p1 ? orderLabel(idx) : '-'}</td>
+                                            <td style="font-weight:700;">${p1 || '-'}</td>
+                                            <td style="font-size:0.85rem; color:var(--text-muted);">${char1 || ''}</td>
+                                            <td style="text-align:center; font-weight:900; color:#4ade80;">${score1 || '0'}</td>
+                                            <td style="text-align:center; font-family:var(--font-head); font-size:0.75rem; text-transform:uppercase; background: rgba(0,0,0,0.1); border-left: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05);">${labels[idx]}</td>
+                                            <td style="text-align:center; font-weight:900; color:#4ade80;">${score2 || '0'}</td>
+                                            <td style="font-size:0.85rem; color:var(--text-muted); text-align:right;">${char2 || ''}</td>
+                                            <td style="font-weight:700; text-align:right;">${p2 || '-'}</td>
+                                            <td style="opacity:0.6; font-size:0.8rem; text-align:right;">${p2 ? orderLabel(idx) : '-'}</td>
                                         </tr>
                                     `;
                                 }).join('');
@@ -1068,6 +1093,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 const mit = parseFloat(s.mit || 0);
                                 
                                 currentScore = (k * 2) + (a * 0.5) - (d * 2) + ((dmg + heal + mit) / 400);
+                            } else if (game === 'Smash Bros') {
+                                // Smash MVP: Stocks Taken - Stocks Lost (+/-)
+                                const k = parseFloat(s.k || 0);
+                                const d = parseFloat(s.d || 0);
+                                currentScore = (k - d) + (k * 0.01); // Use raw points as tiebreaker
                             } else {
                                 // Default / Legacy (Rocket League, Valorant)
                                 currentScore = parseFloat(s.acs || s.s || 0);
@@ -1105,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         filterContainer.appendChild(btnSeries);
 
                         // Game Buttons (Always 1-max)
-                        const maxGames = (game === 'Valorant') ? 3 : 5;
+                        const maxGames = (game === 'Valorant' || game === 'Smash Bros') ? 3 : 5;
                         for (let i = 1; i <= maxGames; i++) {
                             const btn = document.createElement('button');
                             btn.textContent = `Game ${i}`;
