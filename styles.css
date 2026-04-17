@@ -1001,6 +1001,15 @@ select:focus {
     border: 1px solid #334155;
     border-radius: 8px;
     padding: 2rem;
+    margin-bottom: 0; /* Clear bottom margin to sit flush with filters below */
+}
+
+#stats-filter-container {
+    transition: all 0.2s ease;
+}
+
+#stats-filter-container button {
+    min-width: 120px;
 }
 
 .card-title {
@@ -2342,9 +2351,19 @@ select:focus {
 /* Match MVP Section Layout */
 .match-stats-layout {
     display: grid;
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 800px 380px; /* Hard limits as requested */
     gap: 2rem;
-    align-items: stretch; /* Ensure both columns are equal height */
+    align-items: stretch;
+    width: 1212px; /* Fixed width to prevent auto-resizing */
+    margin: 3rem auto;
+}
+
+.stats-main-column {
+    width: 800px;
+}
+
+.stats-side-column {
+    width: 380px;
 }
 
 @media (max-width: 1100px) {
