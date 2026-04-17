@@ -28,10 +28,41 @@ const teamColors = {
     'BYE': '#334155'
 };
 window.teamColors = teamColors;
-
 window.teamLogos = teamLogos; // Ensure explicitly on window for admin.html
-
 const teams = ['Baylor', 'Boise State', 'Kansas', 'Michigan State', 'Minnesota', 'Nebraska', 'Ohio State', 'Syracuse', 'Utah'];
+
+// Default Team Games
+const defaultTeamGames = {
+    'Baylor': ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'],
+    'Boise State': ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'],
+    'Kansas': ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'],
+    'Michigan State': ['Rocket League', 'Smash Bros', 'Valorant'],
+    'Minnesota': ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'],
+    'Nebraska': ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'],
+    'Ohio State': ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'],
+    'Syracuse': ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'],
+    'Utah': ['Rocket League', 'Overwatch 2', 'Valorant'],
+    'BYE': ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant']
+};
+window.teamGames = defaultTeamGames;
+
+// Load Custom School Info
+let schoolInfo = {};
+try {
+    schoolInfo = JSON.parse(localStorage.getItem('pec_school_info') || '{}');
+} catch (e) {
+    console.warn('Failed to parse pec_school_info', e);
+}
+
+// Apply overrides
+Object.keys(schoolInfo).forEach(team => {
+    const info = schoolInfo[team];
+    if (info.logo) teamLogos[team] = info.logo;
+    if (info.primaryColor) teamColors[team] = info.primaryColor;
+    if (info.games && Array.isArray(info.games)) {
+        window.teamGames[team] = info.games;
+    }
+});
 
 const getLogoImg = (name, size = '70%') => {
     if (name === 'BYE') return '-';
@@ -91,9 +122,11 @@ const generateSeries = (teamA, teamB, timeBase) => {
         { teamA, teamB, time: formatTime(timeBase, 0), game: 'Valorant' }
     ];
 
-    // Apply Exclusions
-    if (teamA === 'Michigan State' || teamB === 'Michigan State') games = games.filter(g => g.game !== 'Overwatch 2');
-    if (teamA === 'Utah' || teamB === 'Utah') games = games.filter(g => g.game !== 'Smash Bros');
+    // Apply Dynamic Exclusions
+    games = games.filter(g => 
+        window.teamGames[teamA] && window.teamGames[teamA].includes(g.game) && 
+        (teamB === 'BYE' || (window.teamGames[teamB] && window.teamGames[teamB].includes(g.game)))
+    );
 
     if (teamB === 'BYE') {
         const potentialGames = ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'];
@@ -1643,6 +1676,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 filteredMatches = filteredMatches.filter(m => m.teamA === selectedTeam || m.teamB === selectedTeam);
             }
 
+            if (activeGameFilter !== 'all') {
+                filteredMatches = filteredMatches.filter(m => m.game === activeGameFilter);
+            }
+
             renderScheduleList(filteredMatches);
         };
 
@@ -1686,6 +1723,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             teamFilter.addEventListener('change', updateSchedule);
         }
 
+        const scheduleFilters = document.querySelectorAll('.game-filter');
+        scheduleFilters.forEach(btn => {
+            btn.addEventListener('click', () => {
+                updateSchedule();
+            });
+        });
+
         renderWeekSelector();
         updateSchedule();
     }
@@ -1694,14 +1738,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     const generateStandings = (gameName) => {
-        let currentTeams = teams;
-
-        if (gameName === 'Overwatch 2') {
-            currentTeams = teams.filter(t => t !== 'Michigan State');
-        } else if (gameName === 'Smash Bros') {
-            currentTeams = teams.filter(t => t !== 'Utah');
-        }
-
+        let currentTeams = teams.filter(t => window.teamGames[t] && window.teamGames[t].includes(gameName));
         return currentTeams.map(team => {
             return {
                 team: team,
@@ -1810,6 +1847,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (matchedTeam) {
             teamId = matchedTeam; // Use canonical casing
 
+            // Filter Game Nav Buttons
+            const supportedGames = window.teamGames[teamId] || [];
+            const filterBtns = document.querySelectorAll('.game-filter');
+            let firstSupported = null;
+            let activeHidden = false;
+
+            filterBtns.forEach(btn => {
+                if (!supportedGames.includes(btn.dataset.game)) {
+                    btn.style.display = 'none';
+                    if (btn.classList.contains('active')) activeHidden = true;
+                } else {
+                    btn.style.display = 'inline-block';
+                    if (!firstSupported) firstSupported = btn;
+                }
+            });
+
+            if (activeHidden && firstSupported) {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                firstSupported.classList.add('active');
+            }
+
             // Update Hero
             teamHeroName.textContent = teamId;
 
@@ -1821,10 +1879,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (teamScheduleBody) {
                 // --- Team Schedule Rendering Logic ---
                 const renderTeamSchedule = () => {
-                    const gameFilter = document.getElementById('team-game-filter');
+                    const gameFilter = document.querySelector('.game-filter.active');
                     if (!teamScheduleBody) return;
 
-                    const filterValue = gameFilter ? gameFilter.value : 'Rocket League'; // Default if not ready
+                    const filterValue = gameFilter ? gameFilter.dataset.game : 'Rocket League'; // Default if not ready
 
                     // Find matches filtered by team AND selected game
                     let allTeamMatches = [];
@@ -1910,18 +1968,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const detailsUrl = `match-details.html?week=${series.week}&game=${encodeURIComponent(m.game)}&teamA=${encodeURIComponent(teamId)}&teamB=${encodeURIComponent(series.opponent)}`;
 
                             return `
-                            <tr style="cursor:pointer;" onclick="window.location.href='${detailsUrl}'">
-                                <td style="color:var(--text-muted); font-weight:700;">${series.week}</td>
-                                <td>${series.date}</td>
-                                <td>
-                                    <div class="opponent-flex">
-                                        <div class="opponent-logo-small">${oppLogo}</div>
-                                        <span style="font-weight:600;">${series.opponent}</span>
+                            <tr style="cursor:pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(51, 65, 85, 0.5)'" onmouseout="this.style.background='transparent'" onclick="window.location.href='${detailsUrl}'">
+                                <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid #1e293b;">
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                                        <span style="color:#94a3b8; font-size:0.75rem; width:15px; display:inline-block; font-family:var(--font-head);">vs</span>
+                                        <div style="width:24px; height:24px; display:flex; justify-content:center; align-items:center;">${oppLogo}</div>
+                                        <span style="font-weight:600; font-size:0.9rem; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${series.opponent}</span>
                                     </div>
                                 </td>
-                                <td>${resultHTML}</td>
-                                <td>
-                                    <a href="${detailsUrl}" class="btn btn-outline" style="font-size:0.7rem; padding:0.2rem 0.5rem;">Details</a>
+                                <td style="padding: 0.6rem 0.5rem; text-align:right; border-bottom: 1px solid #1e293b; font-size:0.85rem; white-space:nowrap;">
+                                    ${resultHTML}
                                 </td>
                             </tr>
                             `;
@@ -1934,11 +1990,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // --- Roster Logic (Real Data) ---
                 const renderTeamPageRoster = () => {
                     const rosterContainer = document.getElementById('team-roster-grid');
-                    const gameFilter = document.getElementById('team-game-filter');
+                    const gameFilter = document.querySelector('.game-filter.active');
 
                     if (!rosterContainer || !gameFilter) return;
 
-                    const filterValue = gameFilter.value;
+                    const filterValue = gameFilter.dataset.game;
                     const teamRoster = rosterData[teamId] || [];
 
                     // Filter Logic
@@ -1953,16 +2009,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     rosterContainer.innerHTML = filteredRoster.map(p => `
-                        <div class="player-card">
-                            <div class="player-avatar">
-                                <img src="${p.photo ? p.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random&color=fff&size=100`}" alt="${p.name}">
+                        <div class="compact-player-card" style="display: flex; align-items: center; gap: 1rem; background: #0f172a; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #334155; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" onclick="window.location.href='player.html?player=${encodeURIComponent(p.name)}&team=${encodeURIComponent(teamId)}'">
+                            <div class="player-avatar" style="width: 50px; height: 50px; flex-shrink: 0; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-blue);">
+                                <img src="${p.photo ? p.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random&color=fff&size=100`}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover;">
                             </div>
-                            <div class="player-info">
-                                <a href="player.html?player=${encodeURIComponent(p.name)}&team=${encodeURIComponent(teamId)}" style="text-decoration:none; color:inherit;">
-                                    <h3>${p.name}</h3>
-                                </a>
-                                <div class="player-role" style="color:var(--accent-red); font-size:0.9rem; font-weight:bold;">${p.game}</div>
-                                <div class="player-role">${p.role}</div>
+                            <div class="player-info" style="display: flex; flex-direction: column; justify-content: center; text-align: left;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: #fff;">${p.name}</h3>
+                                <div class="player-role" style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem; font-weight: 500;">
+                                    <span style="color:var(--accent-red);">${p.game}</span> • ${p.role}
+                                </div>
                             </div>
                         </div>
                     `).join('');
@@ -1974,14 +2029,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderTeamStatsV2(); // Init Stats
 
                 // Listener
-                const gameFilterSelect = document.getElementById('team-game-filter');
-                if (gameFilterSelect) {
-                    gameFilterSelect.addEventListener('change', () => {
+                const teamGameFilters = document.querySelectorAll('.game-filter');
+                teamGameFilters.forEach(btn => {
+                    btn.addEventListener('click', () => {
                         renderTeamSchedule();
                         renderTeamPageRoster();
                         renderTeamStatsV2(); // Update Stats on filter change
                     });
-                }
+                });
 
                 // Match Details Code End
             }
@@ -1992,34 +2047,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Global Event Delegation for Tabs (Unbreakable) ---
-    document.addEventListener('click', (e) => {
-        if (e.target && e.target.classList.contains('team-tab')) {
-            e.preventDefault();
-            const btn = e.target;
-            const targetKey = btn.dataset.tab;
-
-            const viewSections = {
-                'schedule': document.getElementById('view-overview'),
-                'roster': document.getElementById('view-roster'),
-                'stats': document.getElementById('view-stats')
-            };
-
-            const targetSection = viewSections[targetKey];
-            if (!targetSection) return;
-
-            document.querySelectorAll('.team-tab').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            Object.values(viewSections).forEach(sec => { if (sec) sec.style.display = 'none'; });
-            targetSection.style.display = 'block';
-
-            if (targetKey === 'stats' && typeof renderTeamStatsV2 === 'function') renderTeamStatsV2();
-        }
-    });
-
-
-
+    // --- Global Event Delegation for Tabs (Removed for Unified Layout) ---
     // --- Watch Page Logic ---
     const watchPage = document.querySelector('.watch-hero');
     if (watchPage) {
@@ -2357,8 +2385,8 @@ window.renderTeamStatsV2 = () => {
     const teamId = urlParams.get('team') || urlParams.get('id');
     if (!teamId) return;
 
-    const gameFilter = document.getElementById('team-game-filter');
-    const activeGame = gameFilter ? gameFilter.value : 'Rocket League';
+    const gameFilter = document.querySelector('.game-filter.active');
+    const activeGame = gameFilter ? gameFilter.dataset.game : 'Rocket League';
 
     console.log('Rendering Stats for:', teamId, activeGame);
 
@@ -2743,20 +2771,8 @@ window.renderTeamStatsV2 = () => {
         </div>
         `;
 
-        // Update Container to Grid
-        statsContainer.style.display = 'grid';
-        statsContainer.style.gridTemplateColumns = '1.2fr 0.8fr'; // 60/40 Split
-        statsContainer.style.gap = '2rem';
-        statsContainer.style.alignItems = 'start';
-
-        // Media Query for Mobile (in JS or CSS? JS inline style override might be tricky, better to add class and CSS)
-        // Adding inline media query hack or just ensure CSS handles it.
-        // Let's modify index.css or add a <style> block if needed.
-        // For now, I'll set the grid styles directly.
-        // To make it responsive, I should check window width or use flex-wrap?
-        if (window.innerWidth < 1024) {
-            statsContainer.style.gridTemplateColumns = '1fr';
-        }
+        // Removed Grid Layout for Unified View
+        statsContainer.style.display = 'block';
 
     } else if (activeGame === 'Rocket League') {
         statsContainer.style.display = 'block'; // Reset grid for Table + Cards layout (similar to Smash structure)
@@ -2881,9 +2897,8 @@ window.renderTeamStatsV2 = () => {
                     </tbody>
                 </table>`;
 
-            // Combine
+            // Combine (Performers Only)
             statsContainer.innerHTML = `
-                <div>${tableHTML}</div>
                 <div class="top-performers-section" style="background:#1e293b; border-radius:12px; padding:1.5rem; border:1px solid rgba(255,255,255,0.05);">
                      <h3 style="margin-top:0; margin-bottom:1.5rem; color:#f8fafc; font-size:1.2rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem;">Top Performers (Season)</h3>
                      ${performersHTML}
@@ -2891,12 +2906,7 @@ window.renderTeamStatsV2 = () => {
             `;
         }
     } else if (activeGame === 'Smash Bros') {
-        // Grid Layout (Same as OW/Val)
-        statsContainer.style.display = 'grid';
-        statsContainer.style.gridTemplateColumns = '1.2fr 0.8fr';
-        statsContainer.style.gap = '2rem';
-        statsContainer.style.alignItems = 'start';
-        if (window.innerWidth < 1024) statsContainer.style.gridTemplateColumns = '1fr';
+        statsContainer.style.display = 'block';
 
         // 1. Init Data
         const teamPlayers = (rosterData[teamId] || []).filter(p => p.game === activeGame);
@@ -2997,7 +3007,6 @@ window.renderTeamStatsV2 = () => {
         }
 
         statsContainer.innerHTML = `
-            <div>${tableHTML}</div>
             <div class="top-performers-section" style="background:#1e293b; border-radius:12px; padding:1.5rem; border:1px solid rgba(255,255,255,0.05);">
                  <h3 style="margin-top:0; margin-bottom:1.5rem; color:#f8fafc; font-size:1.2rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem;">Top Performers</h3>
                  ${performersHTML}

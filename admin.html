@@ -169,9 +169,9 @@
 
         <div class="admin-grid">
             <aside class="admin-sidebar">
-                <div class="admin-nav-item" onclick="switchTab('settings')">Global Settings</div>
-                <div class="admin-nav-item active" onclick="switchTab('schedule')">Schedule Editor</div>
-
+                <div class="admin-nav-item active" onclick="switchTab('settings')">Global Settings</div>
+                <div class="admin-nav-item" onclick="switchTab('school')">School Info Editor</div>
+                <div class="admin-nav-item" onclick="switchTab('schedule')">Schedule Editor</div>
                 <div class="admin-nav-item" onclick="switchTab('roster')">Roster Editor</div>
                 <div class="admin-nav-item" onclick="switchTab('reports')">Match Reports</div>
                 <div class="admin-nav-item" onclick="switchTab('news')">News Editor</div>
@@ -181,7 +181,7 @@
 
             <main class="admin-content">
                 <!-- Global Settings -->
-                <div id="view-settings" style="display:none;">
+                <div id="view-settings">
                     <h2>Global Website Settings</h2>
                     <div class="editor-card">
                         <div class="form-group">
@@ -204,8 +204,45 @@
                         <button class="btn btn-primary" onclick="saveGlobalSettings()">Save Settings</button>
                     </div>
                 </div>
+                
+                <!-- School Info Editor -->
+                <div id="view-school" style="display:none;">
+                    <h2>School Information Editor</h2>
+                    <p style="color:var(--text-muted);">Customize logos, colors, and the games a school competes in.</p>
+                    <div class="editor-card">
+                        <div class="form-group">
+                            <label>Select Team</label>
+                            <select id="admin-school-team-select" class="form-control" style="max-width:300px;" onchange="loadSchoolEditor()">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="margin-top: 1.5rem;">
+                            <label>Logo URL</label>
+                            <input type="text" id="admin-school-logo" class="form-control" placeholder="https://...">
+                        </div>
 
+                        <div class="form-group" style="margin-top: 1.5rem;">
+                            <label>Primary Color (Hex)</label>
+                            <div style="display:flex; align-items:center; gap: 1rem;">
+                                <input type="color" id="admin-school-color" class="form-control" style="width:50px; height:40px; padding:0; cursor:pointer;" value="#333333">
+                                <input type="text" id="admin-school-color-text" class="form-control" style="max-width:150px;" placeholder="#000000" oninput="document.getElementById('admin-school-color').value = this.value" onchange="document.getElementById('admin-school-color').value = this.value">
+                            </div>
+                        </div>
 
+                        <div class="form-group" style="margin-top: 1.5rem;">
+                            <label>Games Competed In</label>
+                            <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
+                                <label style="display:flex; align-items:center; gap:0.5rem;"><input type="checkbox" id="admin-school-game-rl" value="Rocket League"> Rocket League</label>
+                                <label style="display:flex; align-items:center; gap:0.5rem;"><input type="checkbox" id="admin-school-game-ow" value="Overwatch 2"> Overwatch 2</label>
+                                <label style="display:flex; align-items:center; gap:0.5rem;"><input type="checkbox" id="admin-school-game-sb" value="Smash Bros"> Smash Bros</label>
+                                <label style="display:flex; align-items:center; gap:0.5rem;"><input type="checkbox" id="admin-school-game-val" value="Valorant"> Valorant</label>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" style="margin-top:2rem;" onclick="saveSchoolInfo()">Save School Info</button>
+                    </div>
+                </div>
 
                 <!-- Schedule Editor -->
                 <div id="view-schedule">
@@ -439,13 +476,95 @@
             }
         }
 
+        // --- SCHOOL INFO LOGIC ---
+        let adminSchoolData = {};
+        
+        function initSchoolEditor() {
+            try {
+                adminSchoolData = JSON.parse(localStorage.getItem('pec_school_info') || '{}');
+            } catch(e) {
+                adminSchoolData = {};
+            }
+
+            const select = document.getElementById('admin-school-team-select');
+            if (select && window.teamLogos) {
+                select.innerHTML = '<option value="">-- Choose a Team --</option>';
+                const teams = Object.keys(window.teamLogos).filter(t => t !== 'BYE').sort();
+                teams.forEach(t => {
+                    select.innerHTML += `<option value="${t}">${t}</option>`;
+                });
+            }
+            
+            const colorPicker = document.getElementById('admin-school-color');
+            const colorText = document.getElementById('admin-school-color-text');
+            if (colorPicker && colorText) {
+                colorPicker.addEventListener('input', (e) => {
+                    colorText.value = e.target.value.toUpperCase();
+                });
+            }
+        }
+
+        function loadSchoolEditor() {
+            const team = document.getElementById('admin-school-team-select').value;
+            if (!team) {
+                document.getElementById('admin-school-logo').value = '';
+                document.getElementById('admin-school-color').value = '#333333';
+                document.getElementById('admin-school-color-text').value = '';
+                return;
+            }
+
+            const info = adminSchoolData[team] || {};
+            const logo = info.logo || window.teamLogos[team] || 'placeholder.png';
+            let color = info.primaryColor || window.teamColors[team] || '#333333';
+            const games = info.games || window.teamGames[team] || [];
+
+            document.getElementById('admin-school-logo').value = logo;
+            
+            if(color.length === 4) color = '#' + color[1]+color[1]+color[2]+color[2]+color[3]+color[3];
+            document.getElementById('admin-school-color').value = color;
+            document.getElementById('admin-school-color-text').value = color;
+
+            document.getElementById('admin-school-game-rl').checked = games.includes('Rocket League');
+            document.getElementById('admin-school-game-ow').checked = games.includes('Overwatch 2');
+            document.getElementById('admin-school-game-sb').checked = games.includes('Smash Bros');
+            document.getElementById('admin-school-game-val').checked = games.includes('Valorant');
+        }
+
+        function saveSchoolInfo() {
+            const team = document.getElementById('admin-school-team-select').value;
+            if (!team) {
+                alert('Please select a team first.');
+                return;
+            }
+
+            const logo = document.getElementById('admin-school-logo').value.trim();
+            const color = document.getElementById('admin-school-color').value.trim();
+            
+            const games = [];
+            if (document.getElementById('admin-school-game-rl').checked) games.push('Rocket League');
+            if (document.getElementById('admin-school-game-ow').checked) games.push('Overwatch 2');
+            if (document.getElementById('admin-school-game-sb').checked) games.push('Smash Bros');
+            if (document.getElementById('admin-school-game-val').checked) games.push('Valorant');
+
+            if (!adminSchoolData[team]) adminSchoolData[team] = {};
+            adminSchoolData[team] = { logo, primaryColor: color, games };
+
+            localStorage.setItem('pec_school_info', JSON.stringify(adminSchoolData));
+            
+            window.teamLogos[team] = logo;
+            window.teamColors[team] = color;
+            window.teamGames[team] = games;
+
+            alert(`School info saved for ${team}!`);
+        }
+
         // --- SCORES LOGIC ---
         function initAdmin() {
             loadGlobalSettings();
+            initSchoolEditor(); // Init School Editor
             loadScheduleEditor();
             initRosterDropdown();
             loadReports();
-            renderNewsEditor(); // Init News Editor
             renderNewsEditor(); // Init News Editor
             renderWatchEditor(); // Init Watch Editor
             loadOddsEditor(); // Init Odds Editor

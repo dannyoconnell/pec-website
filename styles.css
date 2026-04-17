@@ -2324,3 +2324,17 @@ select:focus {
         min-width: 140px;
     }
 }
+
+/* --- Team Unified Grid --- */
+.team-unified-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 2rem;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .team-unified-grid {
+        grid-template-columns: 1fr;
+    }
+}

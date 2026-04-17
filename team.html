@@ -28,10 +28,18 @@
                 </ul>
             </nav>
             <div class="header-actions">
-                <button class="btn btn-outline" style="margin-right:0.5rem">Log In</button>
                 <a href="admin.html" class="btn btn-primary" style="text-decoration:none;">Admin</a>
             </div>
         </div>
+        <!-- Game Filter Nav -->
+        <nav class="game-nav">
+            <div class="container game-nav-inner">
+                <button class="game-filter active" data-game="Rocket League">Rocket League</button>
+                <button class="game-filter" data-game="Overwatch 2">Overwatch 2</button>
+                <button class="game-filter" data-game="Smash Bros">Smash Bros</button>
+                <button class="game-filter" data-game="Valorant">Valorant</button>
+            </div>
+        </nav>
     </header>
 
     <main>
@@ -47,43 +55,16 @@
                 </div>
             </section>
 
-            <section class="team-subnav-section">
-                <div class="container team-subnav-inner">
-                    <div class="team-filter-group">
-                        <select id="team-game-filter">
-
-                            <option value="Rocket League">Rocket League</option>
-                            <option value="Overwatch 2">Overwatch 2</option>
-                            <option value="Smash Bros">Smash Bros</option>
-                            <option value="Valorant">Valorant</option>
-                        </select>
-                    </div>
-                    <nav class="team-tabs">
-                        <button class="team-tab active" data-tab="schedule">Schedule</button>
-                        <button class="team-tab" data-tab="roster">Roster</button>
-                        <button class="team-tab" data-tab="stats">Stats</button>
-                    </nav>
-                </div>
-            </section>
         </div>
 
-        <section class="container" style="padding: 2rem 1rem;">
-            <!-- Overview/Schedule View -->
+        <section class="container team-unified-grid" style="padding: 2rem 1rem;">
+            <!-- Left: Schedule View -->
             <div id="view-overview" class="team-view active">
-                <div class="section-header">
-                    <h2>Upcoming Matches</h2>
+                <div class="section-header" style="margin-bottom: 1rem;">
+                    <h2 style="font-size: 1.25rem;">Upcoming Matches</h2>
                 </div>
                 <div class="table-responsive">
-                    <table class="team-schedule-table">
-                        <thead>
-                            <tr>
-                                <th>WK</th>
-                                <th>DATE</th>
-                                <th>OPPONENT</th>
-                                <th>RESULT</th>
-                                <th>DETAILS</th>
-                            </tr>
-                        </thead>
+                    <table class="team-schedule-table" style="font-size: 0.85rem;">
                         <tbody id="team-schedule-body">
                             <!-- Injected via JS -->
                         </tbody>
@@ -91,22 +72,19 @@
                 </div>
             </div>
 
-            <!-- Roster View -->
-            <div id="view-roster" class="team-view" style="display:none;">
-                <div class="section-header">
-                    <h2>Active Roster</h2>
-                </div>
-                <div class="roster-grid" id="team-roster-grid">
+            <!-- Center: Stats View -->
+            <div id="view-stats" class="team-view active">
+                <div class="stats-container" id="team-stats-view-content">
                     <!-- Injected Via JS -->
                 </div>
             </div>
 
-            <!-- Stats View -->
-            <div id="view-stats" class="team-view" style="display:none;">
-                <div class="section-header">
-                    <h2>Season Statistics</h2>
+            <!-- Right: Roster View -->
+            <div id="view-roster" class="team-view active">
+                <div class="section-header" style="margin-bottom: 1rem;">
+                    <h2 style="font-size: 1.25rem;">Roster</h2>
                 </div>
-                <div class="stats-container" id="team-stats-view-content">
+                <div class="vertical-roster-list" id="team-roster-grid" style="display:flex; flex-direction:column; gap:1rem;">
                     <!-- Injected Via JS -->
                 </div>
             </div>
