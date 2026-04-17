@@ -69,7 +69,7 @@ try {
 }
 
 window.teamCampuses = {};
-// Apply overrides
+// Apply local overrides (Legacy compatibility)
 Object.keys(schoolInfo).forEach(team => {
     const info = schoolInfo[team];
     if (info.logo) teamLogos[team] = info.logo;
@@ -79,6 +79,30 @@ Object.keys(schoolInfo).forEach(team => {
     }
     if (info.campusImage) window.teamCampuses[team] = info.campusImage;
 });
+
+// GLOBAL FETCH FOR SCHOOL INFO (Universal)
+async function loadSchoolData() {
+    try {
+        const res = await fetch('db/schools.json');
+        if (!res.ok) throw new Error("Local JSON Failure");
+        const data = await res.json();
+        
+        Object.keys(data).forEach(team => {
+            const info = data[team];
+            if (info.logo) teamLogos[team] = info.logo;
+            if (info.primaryColor) teamColors[team] = info.primaryColor;
+            if (info.games && Array.isArray(info.games)) {
+                window.teamGames[team] = info.games;
+            }
+            if (info.campusImage) window.teamCampuses[team] = info.campusImage;
+        });
+        console.log("Universal School Info Loaded from JSON:", Object.keys(data).length, "teams");
+    } catch (e) {
+        console.warn("Universal School Info via JSON unavailable, using local/defaults.", e);
+    }
+}
+// Run immediately
+loadSchoolData();
 
 const getLogoImg = (name, size = '70%') => {
     if (name === 'BYE') return '-';

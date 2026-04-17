@@ -218,12 +218,20 @@
                         </div>
                         
                         <div class="form-group" style="margin-bottom:1rem;">
-                            <label style="display:block; margin-bottom:0.5rem;">Team Logo URL</label>
-                            <input type="text" id="admin-school-logo" class="form-control" placeholder="https://...">
+                            <label style="display:block; margin-bottom:0.5rem;">Team Logo (Upload)</label>
+                            <input type="file" id="admin-school-logo-file" class="form-control" accept="image/*" onchange="handleFileUpload(this, 'admin-school-logo-preview')">
+                            <input type="hidden" id="admin-school-logo">
+                            <div id="admin-school-logo-preview" style="margin-top:0.5rem; height:100px; width:100px; background:#1e293b; border-radius:4px; overflow:hidden; display:flex; align-items:center; justify-content:center; border: 1px solid #334155;">
+                                <img style="max-width:100%; max-height:100%; object-fit:contain;">
+                            </div>
                         </div>
                         <div class="form-group" style="margin-bottom:1rem;">
-                            <label style="display:block; margin-bottom:0.5rem;">Campus Background Image URL (Optional)</label>
-                            <input type="text" id="admin-school-campus" class="form-control" placeholder="https://...">
+                            <label style="display:block; margin-bottom:0.5rem;">Campus Background Image (Upload)</label>
+                            <input type="file" id="admin-school-campus-file" class="form-control" accept="image/*" onchange="handleFileUpload(this, 'admin-school-campus-preview')">
+                            <input type="hidden" id="admin-school-campus">
+                            <div id="admin-school-campus-preview" style="margin-top:0.5rem; height:150px; background:#1e293b; border-radius:4px; overflow:hidden; border: 1px solid #334155;">
+                                <img style="width:100%; height:100%; object-fit:cover;">
+                            </div>
                         </div>
                         <div class="form-group" style="margin-bottom:1rem;">
                             <label style="display:block; margin-bottom:0.5rem;">Primary Color</label>
@@ -505,13 +513,52 @@
                     colorText.value = e.target.value.toUpperCase();
                 });
             }
+
+            // Fetch school data from local JSON file (universal)
+            fetch('db/schools.json')
+                .then(res => res.json())
+                .then(data => {
+                    Object.keys(data).forEach(teamName => {
+                        const teamInfo = data[teamName];
+                        adminSchoolData[teamName] = {
+                            logo: teamInfo.logo,
+                            campusImage: teamInfo.campusImage,
+                            primaryColor: teamInfo.primaryColor,
+                            games: teamInfo.games || []
+                        };
+                    });
+                    console.log("Local school data loaded");
+                })
+                .catch(err => console.warn("No local schools.json found or error loading, using defaults:", err));
+        }
+
+        function handleFileUpload(input, previewId) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target.result;
+                const hiddenId = previewId.replace('-preview', '');
+                document.getElementById(hiddenId).value = base64;
+                const previewImg = document.getElementById(previewId).querySelector('img');
+                previewImg.src = base64;
+                previewImg.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
         }
 
         function loadSchoolEditor() {
             const team = document.getElementById('admin-school-team-select').value;
             if (!team) {
                 document.getElementById('admin-school-logo').value = '';
+                document.getElementById('admin-school-logo-file').value = '';
+                document.getElementById('admin-school-logo-preview').querySelector('img').src = '';
+                
                 document.getElementById('admin-school-campus').value = '';
+                document.getElementById('admin-school-campus-file').value = '';
+                document.getElementById('admin-school-campus-preview').querySelector('img').src = '';
+                
                 document.getElementById('admin-school-color').value = '#333333';
                 document.getElementById('admin-school-color-text').value = '';
                 document.getElementById('admin-school-game-rl').checked = false;
@@ -528,7 +575,11 @@
             const games = info.games || ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'];
 
             document.getElementById('admin-school-logo').value = logo;
+            document.getElementById('admin-school-logo-preview').querySelector('img').src = logo || '';
+            
             document.getElementById('admin-school-campus').value = campus;
+            document.getElementById('admin-school-campus-preview').querySelector('img').src = campus || '';
+            
             document.getElementById('admin-school-color').value = color;
             document.getElementById('admin-school-color-text').value = color;
 
@@ -538,7 +589,7 @@
             document.getElementById('admin-school-game-val').checked = games.includes('Valorant');
         }
 
-        function saveSchoolInfo() {
+        async function saveSchoolInfo() {
             const team = document.getElementById('admin-school-team-select').value;
             if (!team) {
                 alert("Please expand and select a team first.");
@@ -555,16 +606,44 @@
             if (document.getElementById('admin-school-game-sb').checked) games.push('Smash Bros');
             if (document.getElementById('admin-school-game-val').checked) games.push('Valorant');
 
-            if (!adminSchoolData[team]) adminSchoolData[team] = {};
-            adminSchoolData[team] = { logo, campusImage: campus, primaryColor: color, games };
+            const payload = {
+                name: team,
+                logo_url: logo,
+                primary_color: color,
+                campus_image: campus,
+                games: games
+            };
 
-            localStorage.setItem('pec_school_info', JSON.stringify(adminSchoolData));
-            
-            window.teamLogos[team] = logo;
-            window.teamColors[team] = color;
-            window.teamGames[team] = games;
+            try {
+                // Try Local Server API first (for dev persistence)
+                const res = await fetch('/api/save-school', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'application/json' }
+                });
 
-            alert(`School info saved for ${team}!`);
+                if (res.ok) {
+                    const result = await res.json();
+                    console.log("School saved to local project file:", result);
+                    alert(`School info saved to 'db/schools.json'. RE-COMMIT this file to GitHub for it to be universal.`);
+                } else {
+                    // Fallback to older logic or inform user
+                    throw new Error("Local server save failed");
+                }
+
+                // Update local memory and window state
+                adminSchoolData[team] = { logo, campusImage: campus, primaryColor: color, games };
+                window.teamLogos[team] = logo;
+                window.teamColors[team] = color;
+                window.teamGames[team] = games;
+                window.teamCampuses[team] = campus;
+
+            } catch (err) {
+                console.warn("Save failed:", err);
+                adminSchoolData[team] = { logo, campusImage: campus, primaryColor: color, games };
+                localStorage.setItem('pec_school_info', JSON.stringify(adminSchoolData));
+                alert(`School info saved LOCALLY in browser memory only (Local Server might not be running). Error: ${err.message}`);
+            }
         }
 
         // --- SCORES LOGIC ---

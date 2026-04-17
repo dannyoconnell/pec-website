@@ -25,6 +25,48 @@ const server = http.createServer(async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
     let pathname = parsedUrl.pathname;
 
+    // --- API LOGIC (Persistence Fallback) ---
+    if (pathname === '/api/save-school' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const schoolData = JSON.parse(body);
+                const dbPath = path.join(__dirname, 'db', 'schools.json');
+                
+                // Ensure db directory exists
+                if (!fs.existsSync(path.join(__dirname, 'db'))) {
+                    fs.mkdirSync(path.join(__dirname, 'db'));
+                }
+
+                // Load existing or init
+                let schools = {};
+                if (fs.existsSync(dbPath)) {
+                    schools = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+                }
+
+                // Update specific team
+                schools[schoolData.name] = {
+                    logo: schoolData.logo_url,
+                    campusImage: schoolData.campus_image,
+                    primaryColor: schoolData.primary_color,
+                    games: schoolData.games
+                };
+
+                fs.writeFileSync(dbPath, JSON.stringify(schools, null, 2));
+                console.log(`Saved school info for ${schoolData.name}`);
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true }));
+            } catch (err) {
+                console.error("Save Error:", err);
+                res.writeHead(500);
+                res.end(JSON.stringify({ error: err.message }));
+            }
+        });
+        return;
+    }
+
     // --- PROXY LOGIC ---
     if (pathname === '/.netlify/functions/fetch-ballchasing') {
         const targetUrl = parsedUrl.query.url;

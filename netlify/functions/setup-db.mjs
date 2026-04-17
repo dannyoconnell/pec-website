@@ -124,11 +124,21 @@ const generateRoster = (teamName) => {
     return roster;
 };
 
-export default async () => {
+const runSetup = async () => {
+    try {
+        const response = await setup();
+        const text = await response.text();
+        console.log(text);
+    } catch (e) {
+        console.error("Setup failed:", e);
+    }
+};
+
+const setup = async () => {
     try {
         console.log("Creating Teams Table...");
-        await sql`DROP TABLE IF EXISTS rosters`;
-        await sql`DROP TABLE IF EXISTS matches`;
+        await sql`DROP TABLE IF EXISTS rosters CASCADE`;
+        await sql`DROP TABLE IF EXISTS matches CASCADE`;
         await sql`DROP TABLE IF EXISTS teams CASCADE`;
 
         await sql`
@@ -136,7 +146,9 @@ export default async () => {
                 id SERIAL PRIMARY KEY,
                 name TEXT UNIQUE NOT NULL,
                 logo_url TEXT,
-                primary_color TEXT
+                primary_color TEXT,
+                campus_image TEXT,
+                games JSONB DEFAULT '["Rocket League", "Overwatch 2", "Smash Bros", "Valorant"]'
             )
         `;
 
@@ -170,11 +182,26 @@ export default async () => {
         console.log("Seeding Teams...");
         for (const name of teams) {
             if (name === 'BYE') continue;
-            await sql`INSERT INTO teams (name, logo_url, primary_color) VALUES (${name}, ${teamLogos[name]}, ${teamColors[name]})`;
+            const games = [
+                'Rocket League',
+                'Overwatch 2',
+                'Smash Bros',
+                'Valorant'
+            ];
+            // Apply specific defaults if needed (e.g. Michigan State no OW2, Utah no Smash)
+            if (name === 'Michigan State') {
+                const idx = games.indexOf('Overwatch 2');
+                if (idx > -1) games.splice(idx, 1);
+            }
+            if (name === 'Utah') {
+                const idx = games.indexOf('Smash Bros');
+                if (idx > -1) games.splice(idx, 1);
+            }
+
+            await sql`INSERT INTO teams (name, logo_url, primary_color, games) VALUES (${name}, ${teamLogos[name]}, ${teamColors[name]}, ${JSON.stringify(games)})`;
         }
 
         console.log("Seeding Matches...");
-        // Flatten matches logic
         let flattenedMatches = [];
         initialScheduleData.forEach(w => {
             w.matches.forEach(m => {
@@ -217,7 +244,6 @@ export default async () => {
             });
         });
 
-        // Insert matches
         for (const m of flattenedMatches) {
             await sql`
                 INSERT INTO matches (week, date, game, team_a, team_b, score_a, score_b, status, time) 
@@ -241,3 +267,13 @@ export default async () => {
         return new Response(`Migration Failed: ${e.message}`, { status: 500 });
     }
 };
+
+export default setup;
+
+// Run if script is the main module
+if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
+    runSetup();
+} else if (process.argv[1].endsWith('setup-db.mjs')) {
+    // Fallback for some node versions/environments
+    runSetup();
+}
