@@ -618,6 +618,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         <span class="mvp-stat-label">Assists</span>
                                     </div>
                                 `;
+                            } else if (game === 'Overwatch 2') {
+                                const dmg = parseInt(stats.dmg || 0);
+                                const heal = parseInt(stats.heal || 0);
+                                const mit = parseInt(stats.mit || 0);
+                                const impact = dmg + heal + mit;
+                                const impactStr = impact > 999 ? (impact/1000).toFixed(1) + 'k' : impact;
+
+                                statsHTML = `
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.k || 0}</span>
+                                        <span class="mvp-stat-label">Elims</span>
+                                    </div>
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.d || 0}</span>
+                                        <span class="mvp-stat-label" style="color:var(--accent-red)">Deaths</span>
+                                    </div>
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${impactStr}</span>
+                                        <span class="mvp-stat-label" title="Damage + Heal + Mitigated">Impact</span>
+                                    </div>
+                                `;
                             }
 
                             container.innerHTML = `
@@ -1032,12 +1053,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         // Calculate and Render MVP
                         let mvpName = null;
-                        let maxScore = -1;
+                        let maxScore = -Infinity;
 
                         Object.keys(displayStats).forEach(name => {
                             const s = displayStats[name];
-                            // Use 'acs' for Valorant, 's' (score) for others
-                            const currentScore = parseFloat(s.acs || s.s || 0);
+                            let currentScore = 0;
+
+                            if (game === 'Overwatch 2') {
+                                const k = parseFloat(s.k || 0);
+                                const a = parseFloat(s.a || 0);
+                                const d = parseFloat(s.d || 0);
+                                const dmg = parseFloat(s.dmg || 0);
+                                const heal = parseFloat(s.heal || 0);
+                                const mit = parseFloat(s.mit || 0);
+                                
+                                currentScore = (k * 2) + (a * 0.5) - (d * 2) + ((dmg + heal + mit) / 400);
+                            } else {
+                                // Default / Legacy (Rocket League, Valorant)
+                                currentScore = parseFloat(s.acs || s.s || 0);
+                            }
+
                             if (currentScore > maxScore) {
                                 maxScore = currentScore;
                                 mvpName = name;
