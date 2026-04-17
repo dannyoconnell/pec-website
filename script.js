@@ -1109,21 +1109,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                             btn.textContent = `Game ${i}`;
                             
                             // Check if game exists in history
-                            // k will be passed to renderTable: index (0-based) for arrays, key (1-based string) for objects.
                             const k = Array.isArray(history) ? (i - 1) : i.toString();
-                            const exists = Array.isArray(history) 
-                                ? (history[i - 1] !== undefined) 
-                                : (history[i.toString()] !== undefined);
+                            const gameData = Array.isArray(history) ? history[i - 1] : history[i.toString()];
+                            const exists = gameData !== undefined;
 
                             if (exists) {
                                 btn.className = 'btn btn-sm btn-outline';
                                 btn.onclick = () => { renderTable(k); updateActive(btn); };
+                                
+                                // Overwatch 2 Map Background
+                                if (game === 'Overwatch 2' && gameData.map) {
+                                    const mapName = gameData.map;
+                                    const filename = mapName.toLowerCase().replace(/ /g, '_').replace(/[:']/g, '') + '.jpg';
+                                    btn.classList.add('btn-map');
+                                    btn.style.backgroundImage = `url('assets/maps/overwatch/${filename}')`;
+                                }
                             } else {
                                 btn.className = 'btn btn-sm btn-outline';
                                 btn.style.opacity = '0.3';
                                 btn.style.cursor = 'not-allowed';
                                 btn.title = 'Game not played';
-                                // No click handler
                             }
                             filterContainer.appendChild(btn);
                         }

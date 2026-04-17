@@ -165,6 +165,45 @@ body {
     color: var(--text-main);
 }
 
+.btn-map {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    color: #fff !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    z-index: 1;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    min-width: 100px;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+}
+
+.btn-map::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+    transition: background 0.3s ease;
+}
+
+.btn-map:hover::before {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: #fff !important;
+}
+
+.btn-map.btn-primary {
+    border: 2px solid white !important;
+    box-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+
+.btn-map.btn-primary::before {
+    background: rgba(0, 0, 0, 0.1);
+}
+
 /* Score Ticker */
 .score-ticker-container {
     background: #000;
