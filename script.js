@@ -568,7 +568,74 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // -- GAME SELECTOR LOGIC --
                     const filterContainer = document.getElementById('stats-filter-container');
 
-                    const renderTable = (mode) => {
+                        const renderMVP = (playerName, stats, mode) => {
+                            const container = document.getElementById('mvp-container');
+                            if (!container) return;
+
+                            // Find full player object for photo
+                            const playersA = (rosterData[teamA] || []).filter(p => p.game === game);
+                            const playersB = (rosterData[teamB] || []).filter(p => p.game === game);
+                            const allPlayers = [...playersA, ...playersB];
+
+                            const playerObj = allPlayers.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+                            if (!playerObj) {
+                                container.innerHTML = '';
+                                return;
+                            }
+
+                            const teamName = playersA.some(p => p.name === playerObj.name) ? teamA : teamB;
+                            const accentColor = teamColors[teamName] || '#fff';
+                            const label = mode === 'series' ? 'Series MVP' : `Game ${mode} MVP`;
+
+                            let statsHTML = '';
+                            if (game === 'Rocket League') {
+                                statsHTML = `
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.k || 0}</span>
+                                        <span class="mvp-stat-label">Goals</span>
+                                    </div>
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.a || 0}</span>
+                                        <span class="mvp-stat-label">Assists</span>
+                                    </div>
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.d || 0}</span>
+                                        <span class="mvp-stat-label">Saves</span>
+                                    </div>
+                                `;
+                            } else if (game === 'Valorant') {
+                                statsHTML = `
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.k || 0}</span>
+                                        <span class="mvp-stat-label">Kills</span>
+                                    </div>
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.acs || stats.s || 0}</span>
+                                        <span class="mvp-stat-label">ACS</span>
+                                    </div>
+                                    <div class="mvp-stat-item">
+                                        <span class="mvp-stat-value">${stats.a || 0}</span>
+                                        <span class="mvp-stat-label">Assists</span>
+                                    </div>
+                                `;
+                            }
+
+                            container.innerHTML = `
+                                <div class="mvp-card" style="border-top: 4px solid ${accentColor}">
+                                    <div class="mvp-badge" style="background:${accentColor}">${label}</div>
+                                    <img src="${playerObj.photo || 'assets/logo.png'}" alt="${playerObj.name}" class="mvp-player-img" onerror="this.src='assets/logo.png'">
+                                    <div class="mvp-info">
+                                        <span class="team-name" style="color:${accentColor}">${teamName}</span>
+                                        <h3>${playerObj.name}</h3>
+                                        <div class="mvp-stats-grid">
+                                            ${statsHTML}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        };
+
+                        const renderTable = (mode) => {
                         let displayStats = {};
                         const cardTitle = document.querySelector('.card-title');
                         const statsTable = document.getElementById('player-stats-table');
@@ -961,6 +1028,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }).join('');
 
                         tbody.innerHTML = rows;
+
+                        // Calculate and Render MVP
+                        let mvpName = null;
+                        let maxScore = -1;
+
+                        Object.keys(displayStats).forEach(name => {
+                            const s = displayStats[name];
+                            // Use 'acs' for Valorant, 's' (score) for others
+                            const currentScore = parseFloat(s.acs || s.s || 0);
+                            if (currentScore > maxScore) {
+                                maxScore = currentScore;
+                                mvpName = name;
+                            }
+                        });
+
+                        if (mvpName) {
+                            renderMVP(mvpName, displayStats[mvpName], mode);
+                        } else {
+                            const container = document.getElementById('mvp-container');
+                            if (container) container.innerHTML = '';
+                        }
                     };
 
 

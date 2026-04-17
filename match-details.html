@@ -67,24 +67,31 @@
             <!-- Team Comparison Removed per user request -->
             <!-- <div class="stats-card">...</div> -->
 
-            <!-- Player Stats -->
-            <div class="stats-card">
-                <h2 class="card-title">Player Statistics</h2>
-                <div class="player-table-responsive">
-                    <table class="player-stats-table" id="player-stats-table">
-                        <thead>
-                            <tr>
-                                <th>Player</th>
-                                <th>Kills</th>
-                                <th>Deaths</th>
-                                <th>Assists</th>
-                                <th>Rating</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Injected JS -->
-                        </tbody>
-                    </table>
+            <div class="match-stats-layout">
+                <div class="stats-main-column">
+                    <!-- Player Stats -->
+                    <div class="stats-card">
+                        <h2 class="card-title">Player Statistics</h2>
+                        <div class="player-table-responsive">
+                            <table class="player-stats-table" id="player-stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Player</th>
+                                        <th>Kills</th>
+                                        <th>Deaths</th>
+                                        <th>Assists</th>
+                                        <th>Rating</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-side-column" id="mvp-container">
+                    <!-- MVP Card Injected via JS -->
                 </div>
             </div>
         </section>
