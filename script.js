@@ -1101,12 +1101,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         btnSeries.className = 'btn btn-sm btn-primary';
                         btnSeries.textContent = 'Series Total';
                         btnSeries.onclick = () => { renderTable('series'); updateActive(btnSeries); };
+                        btnSeries.style.flex = '1';
                         filterContainer.appendChild(btnSeries);
 
-                        // Game Buttons (Always 1-5)
-                        for (let i = 1; i <= 5; i++) {
+                        // Game Buttons (Always 1-max)
+                        const maxGames = (game === 'Valorant') ? 3 : 5;
+                        for (let i = 1; i <= maxGames; i++) {
                             const btn = document.createElement('button');
                             btn.textContent = `Game ${i}`;
+                            btn.style.flex = '1';
                             
                             // Check if game exists in history
                             const k = Array.isArray(history) ? (i - 1) : i.toString();
@@ -1117,12 +1120,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 btn.className = 'btn btn-sm btn-outline';
                                 btn.onclick = () => { renderTable(k); updateActive(btn); };
                                 
-                                // Overwatch 2 Map Background
+                                // Map Background Logic
                                 if (game === 'Overwatch 2' && gameData.map) {
                                     const mapName = gameData.map;
                                     const filename = mapName.toLowerCase().replace(/ /g, '_').replace(/[:']/g, '') + '.jpg';
                                     btn.classList.add('btn-map');
                                     btn.style.backgroundImage = `url('assets/maps/overwatch/${filename}')`;
+                                } else if (game === 'Valorant' && gameData.map) {
+                                    const mapName = gameData.map;
+                                    const filename = mapName.toLowerCase().replace(/ /g, '') + '.png';
+                                    btn.classList.add('btn-map');
+                                    btn.style.backgroundImage = `url('assets/maps/valorant/${filename}')`;
                                 }
                             } else {
                                 btn.className = 'btn btn-sm btn-outline';
