@@ -2486,7 +2486,7 @@ window.renderTeamStatsV2 = () => {
         </div>
 
         <!-- Top Performers Section (Valorant) -->
-        <div class="top-performers-section" style="background:#1e293b; border-radius:12px; padding:1.5rem; border:1px solid rgba(255,255,255,0.05);">
+        <div class="top-performers-section" style="background:#1e293b; border-radius:12px; padding:1.5rem; border:1px solid rgba(255,255,255,0.05); margin-top: 2rem;">
             <h3 style="margin-top:0; margin-bottom:1.5rem; color:#f8fafc; font-size:1.2rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem;">Top Performers (Avg/Game)</h3>
             <div class="performers-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
                 ${(() => {
@@ -2573,11 +2573,7 @@ window.renderTeamStatsV2 = () => {
         `;
 
         // Layout Styles
-        statsContainer.style.display = 'grid';
-        statsContainer.style.gridTemplateColumns = '1.2fr 0.8fr';
-        statsContainer.style.gap = '2rem';
-        statsContainer.style.alignItems = 'start';
-        if (window.innerWidth < 1024) statsContainer.style.gridTemplateColumns = '1fr';
+        statsContainer.style.display = 'block';
 
     } else if (activeGame === 'Overwatch 2') {
         const mapStats = {};
@@ -2689,7 +2685,7 @@ window.renderTeamStatsV2 = () => {
         </div>
         
         <!-- Top Performers Section -->
-        <div class="top-performers-section" style="background:#1e293b; border-radius:12px; padding:1.5rem; border:1px solid rgba(255,255,255,0.05);">
+        <div class="top-performers-section" style="background:#1e293b; border-radius:12px; padding:1.5rem; border:1px solid rgba(255,255,255,0.05); margin-top: 2rem;">
             <h3 style="margin-top:0; margin-bottom:1.5rem; color:#f8fafc; font-size:1.2rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem;">Top Performers (Avg/Game)</h3>
             <div class="performers-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
                 ${(() => {
