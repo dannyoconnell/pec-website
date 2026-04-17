@@ -31,6 +31,20 @@ window.teamColors = teamColors;
 window.teamLogos = teamLogos; // Ensure explicitly on window for admin.html
 const teams = ['Baylor', 'Boise State', 'Kansas', 'Michigan State', 'Minnesota', 'Nebraska', 'Ohio State', 'Syracuse', 'Utah'];
 
+const teamLocations = {
+    'Baylor': 'Waco, Texas',
+    'Boise State': 'Boise, Idaho',
+    'Kansas': 'Lawrence, Kansas',
+    'Michigan State': 'East Lansing, Michigan',
+    'Minnesota': 'Minneapolis, Minnesota',
+    'Nebraska': 'Lincoln, Nebraska',
+    'Ohio State': 'Columbus, Ohio',
+    'Syracuse': 'Syracuse, New York',
+    'Utah': 'Salt Lake City, Utah',
+    'BYE': ''
+};
+window.teamLocations = teamLocations;
+
 // Default Team Games
 const defaultTeamGames = {
     'Baylor': ['Rocket League', 'Overwatch 2', 'Smash Bros', 'Valorant'],
@@ -1873,6 +1887,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Update Hero
             teamHeroName.textContent = teamId;
             document.getElementById('team-hero-logo').innerHTML = getLogoImg(teamId, '80%');
+
+            const locationEl = document.getElementById('team-hero-location');
+            if (locationEl) locationEl.textContent = window.teamLocations[teamId] || 'Member of the Power Esports Conference since 2024.';
+
+            const gamesEl = document.getElementById('team-hero-games');
+            if (gamesEl) {
+                const games = window.teamGames[teamId] || [];
+                
+                const gameIcons = {
+                    'Rocket League': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Rocket_League_logo.svg/512px-Rocket_League_logo.svg.png',
+                    'Overwatch 2': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Overwatch_circle_logo.svg/512px-Overwatch_circle_logo.svg.png',
+                    'Smash Bros': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Super_Smash_Bros._Ultimate_logo.svg/512px-Super_Smash_Bros._Ultimate_logo.svg.png',
+                    'Valorant': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Valorant_logo_-_V_only_%282020%29.svg/512px-Valorant_logo_-_V_only_%282020%29.svg.png'
+                };
+
+                gamesEl.innerHTML = games.map(g => {
+                    const src = gameIcons[g] || 'assets/logo.png';
+                    return `<div style="width: 38px; height: 38px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)'">
+                        <img src="${src}" alt="${g}" title="${g}" style="width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 0 4px rgba(0,0,0,0.5));">
+                    </div>`;
+                }).join('');
+            }
 
             // Set Campus Header Background
             const heroBg = document.getElementById('team-hero-bg');
