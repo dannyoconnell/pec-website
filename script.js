@@ -1103,21 +1103,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                         btnSeries.onclick = () => { renderTable('series'); updateActive(btnSeries); };
                         filterContainer.appendChild(btnSeries);
 
-                        // Game Buttons
-                        // Normalize keys
-                        const keys = Array.isArray(history)
-                            ? history.map((_, i) => i)
-                            : Object.keys(history).sort((a, b) => parseInt(a) - parseInt(b));
-
-                        keys.forEach(k => {
+                        // Game Buttons (Always 1-5)
+                        for (let i = 1; i <= 5; i++) {
                             const btn = document.createElement('button');
-                            btn.className = 'btn btn-sm btn-outline';
-                            // If Array, k is index (0based), label is k+1. If Object, k is key ('1'), label is k.
-                            const label = Array.isArray(history) ? (parseInt(k) + 1) : k;
-                            btn.textContent = `Game ${label}`;
-                            btn.onclick = () => { renderTable(k); updateActive(btn); };
+                            btn.textContent = `Game ${i}`;
+                            
+                            // Check if game exists in history
+                            // k will be passed to renderTable: index (0-based) for arrays, key (1-based string) for objects.
+                            const k = Array.isArray(history) ? (i - 1) : i.toString();
+                            const exists = Array.isArray(history) 
+                                ? (history[i - 1] !== undefined) 
+                                : (history[i.toString()] !== undefined);
+
+                            if (exists) {
+                                btn.className = 'btn btn-sm btn-outline';
+                                btn.onclick = () => { renderTable(k); updateActive(btn); };
+                            } else {
+                                btn.className = 'btn btn-sm btn-outline';
+                                btn.style.opacity = '0.3';
+                                btn.style.cursor = 'not-allowed';
+                                btn.title = 'Game not played';
+                                // No click handler
+                            }
                             filterContainer.appendChild(btn);
-                        });
+                        }
 
 
                         const updateActive = (target) => {
