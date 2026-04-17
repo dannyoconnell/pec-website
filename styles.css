@@ -2344,7 +2344,7 @@ select:focus {
     display: grid;
     grid-template-columns: 1fr 380px;
     gap: 2rem;
-    align-items: start;
+    align-items: stretch; /* Ensure both columns are equal height */
 }
 
 @media (max-width: 1100px) {
@@ -2365,6 +2365,9 @@ select:focus {
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     transition: all 0.3s ease;
+    height: 100%; /* Take full height of column */
+    display: flex;
+    flex-direction: column;
 }
 
 .mvp-badge {
@@ -2386,7 +2389,8 @@ select:focus {
 
 .mvp-player-img {
     width: 100%;
-    height: 380px;
+    flex: 1; /* Grow to fill space */
+    min-height: 250px; /* Minimum height for small tables */
     object-fit: cover;
     border-radius: 8px;
     margin-bottom: 1.5rem;

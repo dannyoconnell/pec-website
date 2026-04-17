@@ -627,6 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <div class="mvp-info">
                                         <span class="team-name" style="color:${accentColor}">${teamName}</span>
                                         <h3>${playerObj.name}</h3>
+                                        <div style="color:var(--text-muted); font-size: 0.85rem; text-transform:uppercase; font-weight:700; letter-spacing:1px; margin-top:0.25rem;">${playerObj.role || ''}</div>
                                         <div class="mvp-stats-grid">
                                             ${statsHTML}
                                         </div>
