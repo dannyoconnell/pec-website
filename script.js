@@ -538,10 +538,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Construct Report ID: week-game-teamA-teamB
             if (weekParam) {
-                const reportId = `${weekParam}-${game}-${teamA}-${teamB}`.replace(/\s+/g, '');
-                const report = matchReports[reportId];
+                let reportId = `${weekParam}-${game}-${teamA}-${teamB}`.replace(/\s+/g, '');
+                let report = matchReports[reportId];
+                let teamsSwapped = false;
+
+                // Check reverse order if not found
+                if (!report) {
+                    const reverseId = `${weekParam}-${game}-${teamB}-${teamA}`.replace(/\s+/g, '');
+                    report = matchReports[reverseId];
+                    if (report) teamsSwapped = true;
+                }
 
                 if (report) {
+                    // Update Scores (Swap if teams were swapped)
+                    const scoreAEl = document.getElementById('score-A');
+                    const scoreBEl = document.getElementById('score-B');
+                    if (scoreAEl && scoreBEl) {
+                        const finalScoreA = teamsSwapped ? report.scoreB : report.scoreA;
+                        const finalScoreB = teamsSwapped ? report.scoreA : report.scoreB;
+                        scoreAEl.textContent = finalScoreA !== undefined ? finalScoreA : '-';
+                        scoreBEl.textContent = finalScoreB !== undefined ? finalScoreB : '-';
+                        
+                        const bigScore = document.querySelector('.big-score');
+                        if (bigScore) {
+                            bigScore.innerHTML = `<span id="score-A">${finalScoreA !== undefined ? finalScoreA : '-'}</span> - <span id="score-B">${finalScoreB !== undefined ? finalScoreB : '-'}</span>`;
+                        }
+                    }
+
                     const statsTable = document.getElementById('player-stats-table');
 
                     // -- GAME SELECTOR LOGIC --
@@ -574,22 +597,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                             } else {
                                 tbody.innerHTML = matchups.map(m => {
                                     if (!m.pA && !m.pB) return ''; // Skip empty rows
+                                    
+                                    const p1 = teamsSwapped ? m.pB : m.pA;
+                                    const char1 = teamsSwapped ? m.charB : m.charA;
+                                    const score1 = teamsSwapped ? m.scoreB : m.scoreA;
+                                    
+                                    const p2 = teamsSwapped ? m.pA : m.pB;
+                                    const char2 = teamsSwapped ? m.charA : m.charB;
+                                    const score2 = teamsSwapped ? m.scoreA : m.scoreB;
+
                                     return `
                                         <tr>
                                             <td style="text-align:right; vertical-align:middle;">
-                                                <span style="font-weight:bold; font-size:1.1em; display:block;">${m.pA || '<span style="opacity:0.3">-</span>'}</span>
-                                                <span style="font-size:0.85em; opacity:0.7; color:var(--text-muted);">${m.charA || ''}</span>
+                                                <span style="font-weight:bold; font-size:1.1em; display:block;">${p1 || '<span style="opacity:0.3">-</span>'}</span>
+                                                <span style="font-size:0.85em; opacity:0.7; color:var(--text-muted);">${char1 || ''}</span>
                                             </td>
                                             <td style="text-align:center; vertical-align:middle;">
                                                 <div style="font-weight:900; font-size:1.4em; letter-spacing:2px;">
-                                                    <span style="color:var(--accent-green)">${m.scoreA || '0'}</span>
+                                                    <span style="color:var(--accent-green)">${score1 || '0'}</span>
                                                     <span style="color:#475569; margin:0 4px;">-</span>
-                                                    <span style="color:var(--accent-red)">${m.scoreB || '0'}</span>
+                                                    <span style="color:var(--accent-red)">${score2 || '0'}</span>
                                                 </div>
                                             </td>
                                             <td style="text-align:left; vertical-align:middle;">
-                                                <span style="font-weight:bold; font-size:1.1em; display:block;">${m.pB || '<span style="opacity:0.3">-</span>'}</span>
-                                                <span style="font-size:0.85em; opacity:0.7; color:var(--text-muted);">${m.charB || ''}</span>
+                                                <span style="font-weight:bold; font-size:1.1em; display:block;">${p2 || '<span style="opacity:0.3">-</span>'}</span>
+                                                <span style="font-size:0.85em; opacity:0.7; color:var(--text-muted);">${char2 || ''}</span>
                                             </td>
                                         </tr>
                                     `;
