@@ -2009,14 +2009,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     rosterContainer.innerHTML = filteredRoster.map(p => `
-                        <div class="compact-player-card" style="display: flex; align-items: center; gap: 1rem; background: #0f172a; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #334155; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" onclick="window.location.href='player.html?player=${encodeURIComponent(p.name)}&team=${encodeURIComponent(teamId)}'">
-                            <div class="player-avatar" style="width: 50px; height: 50px; flex-shrink: 0; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-blue);">
+                        <div class="compact-player-card" style="display: flex; justify-content: flex-start; align-items: center; gap: 1.5rem; background: #0f172a; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #334155; transition: transform 0.2s; cursor: pointer; text-align: left;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" onclick="window.location.href='player.html?player=${encodeURIComponent(p.name)}&team=${encodeURIComponent(teamId)}'">
+                            <div class="player-avatar" style="width: 50px; height: 50px; flex-shrink: 0; margin: 0; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-blue);">
                                 <img src="${p.photo ? p.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random&color=fff&size=100`}" alt="${p.name}" style="width:100%; height:100%; object-fit:cover;">
                             </div>
                             <div class="player-info" style="display: flex; flex-direction: column; justify-content: center; text-align: left;">
                                 <h3 style="margin: 0; font-size: 1.1rem; color: #fff;">${p.name}</h3>
-                                <div class="player-role" style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem; font-weight: 500;">
-                                    <span style="color:var(--accent-red);">${p.game}</span> • ${p.role}
+                                <div class="player-role" style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem; font-weight: 500; text-transform: uppercase;">
+                                    ${p.role || 'Player'}
                                 </div>
                             </div>
                         </div>
